@@ -6,3 +6,15 @@ Social media is a pet project whose main goal is to provide people from all corn
 ## Demonstration
 https://github.com/olexandrsv/social-media/assets/118433159/affe8c19-d3bf-42b6-a474-96f5f18524bd
 
+
+## Technologies used
+
+### Backend
+- GoLang
+### Frontend
+- Angular
+### Databases
+- PostgreSQL
+- MongoDB
+### Frameworks
+- Gin
