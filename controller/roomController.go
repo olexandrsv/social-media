@@ -36,7 +36,7 @@ func NewRoom(c *gin.Context) {
 
 	var userIds []int
 	for _, user := range users {
-		userId, err := getIdByLogin(user)
+		userId, err := models.GetIdByLogin(user)
 		if err != nil {
 			continue
 		}

@@ -2,10 +2,9 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"social-media/auth"
 	"social-media/database"
-	"social-media/hash"
 	"social-media/models"
 
 	"github.com/gin-gonic/gin"
@@ -21,33 +20,27 @@ func RegisterUser(c *gin.Context) {
 	if passw1 != passw2 {
 		c.JSON(200, gin.H{"message": "passwords aren't equal"})
 	}
-	hashPsw, err := hash.HashPassword(passw1)
-	if err != nil {
-		c.JSON(500, gin.H{})
-	}
-
-	var id int
-
-	conn := database.PostgreConn
-	err = conn.QueryRow(context.Background(), "insert into users (login, first_name, second_name, password, bio, interests) values ($1, $2, $3, $4, $5, $6) returning id", login, firstName, secondName, hashPsw, "", "").Scan(&id)
-	if err != nil {
+	
+	user, err := models.New(login, firstName, secondName, passw1)
+	if err != nil{
 		log.Println(err)
 		c.JSON(500, "internal error")
-		return
 	}
 
-	token, err := auth.GenerateJWT(id, login)
+	err = user.Save()
+	if err != nil{
+		log.Println(err)
+		c.JSON(500, "internal error")
+	}
+
+	user.Register()
+
+	token, err := user.GenerateJWT()
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
 		return
 	}
-
-	user := &models.User{
-		Id:    id,
-		Login: login,
-	}
-	models.ActiveUsers.Set(id, user)
 
 	c.JSON(200, gin.H{
 		"token": token,
@@ -57,35 +50,30 @@ func RegisterUser(c *gin.Context) {
 func UserLogin(c *gin.Context) {
 	login := c.PostForm("login")
 	pssw := c.PostForm("passw")
-	var id int
-	var encodedPassw string
-
-	conn := database.PostgreConn
-	err := conn.QueryRow(context.Background(), "select id, password from users where login=$1", login).Scan(&id, &encodedPassw)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
+	
+	user := &models.User{
+		Login: login,
+		Password: pssw,
 	}
 
-	if !hash.CheckPassword(pssw, encodedPassw) {
+	exist, err := user.Exist()
+	if err != nil{
+		log.Println(err)
+		c.String(500, "internal error")
+	}
+
+	if !exist{
 		log.Println(err)
 		c.String(403, "forbidden")
-		return
 	}
 
-	token, err := auth.GenerateJWT(id, login)
+	token, err := user.GenerateJWT()
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
-		return
 	}
 
-	user := &models.User{
-		Id:    id,
-		Login: login,
-	}
-	models.ActiveUsers.Set(id, user)
+	user.Register()
 
 	c.JSON(200, gin.H{
 		"token": token,
@@ -93,66 +81,43 @@ func UserLogin(c *gin.Context) {
 }
 
 func FollowUser(c *gin.Context) {
-	userLogin := c.Param("login")
+	followedLogin := c.Param("login")
 	token, err := c.Cookie("token")
 	if err != nil {
 		log.Println(err)
 		c.String(400, "no token")
-		return
 	}
-	id, _, err := auth.TokenCredentials(token)
+
+	user, err := models.ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		c.String(400, "invalid credentials")
-		return
 	}
 
-	followerId, err := getIdByLogin(userLogin)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
-	}
-
-	conn := database.PostgreConn
-	_, err = conn.Exec(context.Background(), "insert into followers (user_id, follower_id) values ($1, $2)", followerId, id)
+	followedID, err := models.GetIdByLogin(followedLogin)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
 	}
 
-}
-
-func getIdByLogin(login string) (int, error) {
-	var id int
-	conn := database.PostgreConn
-	err := conn.QueryRow(context.Background(), "select id from users where login=$1", login).Scan(&id)
+	user.Subscribe(followedID)
 	if err != nil {
-		return 0, err
+		log.Println(err)
+		c.String(500, "internal error")
 	}
-	return id, nil
+
 }
 
 func GetFollowedInfo(c *gin.Context) {
 	login := c.Param("login")
-	var firstName string
-	var secondName string
-	var bio string
-	var interests string
-	conn := database.PostgreConn
-	err := conn.QueryRow(context.Background(), "select first_name, second_name, bio, interests from users where login=$1", login).Scan(&firstName, &secondName, &bio, &interests)
+	fmt.Println(login)
+	user, err := models.Load(login)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
 		return
 	}
-	c.JSON(200, gin.H{
-		"login":      login,
-		"firstName":  firstName,
-		"secondName": secondName,
-		"bio":        bio,
-		"interests":  interests,
-	})
+	c.JSON(200, user)
 }
 
 func FollowingAccounts(c *gin.Context) {
@@ -160,23 +125,25 @@ func FollowingAccounts(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.String(400, "no token")
-		return
 	}
-	id, _, err := auth.TokenCredentials(token)
+
+	user, err := models.ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		c.String(400, "invalid credentials")
-		return
 	}
 
-	following, err := getFollowingLogins(id)
+	followers, err := user.Followed()
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
-		return
 	}
 
-	c.JSON(200, following)
+	var logins []string
+	for _, follower := range followers{
+		logins = append(logins, follower.Login)
+	}
+	c.JSON(200, logins)
 }
 
 func getFollowingIds(id int) ([]int, error) {

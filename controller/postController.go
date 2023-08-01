@@ -120,7 +120,7 @@ func ChangeMessage(c *gin.Context) {
 	req := generatePostRequest(text, login, image, files)
 
 	coll := database.MI.DB.Collection("posts")
-	_, err = coll.UpdateByID(context.Background(), id, bson.D{{"$set", req}})
+	_, err = coll.UpdateByID(context.Background(), id, bson.D{{Key: "$set", Value: req}})
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
@@ -151,7 +151,7 @@ func GetNPosts(c *gin.Context) {
 
 func GetOtherPosts(c *gin.Context) {
 	login := c.Param("login")
-	id, err := getIdByLogin(login)
+	id, err := models.GetIdByLogin(login)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
@@ -208,7 +208,7 @@ func countPosts(collection, key string, value int) (int64, error) {
 func getPosts(id int) ([]bson.M, error) {
 	coll := database.MI.DB.Collection("posts")
 	var res []bson.M
-	cursor, err := coll.Find(context.Background(), bson.D{{"userId", id}})
+	cursor, err := coll.Find(context.Background(), bson.D{{Key: "userId", Value: id}})
 	if err != nil {
 		return nil, err
 	}

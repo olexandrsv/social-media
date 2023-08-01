@@ -5,7 +5,7 @@ import (
 	"log"
 	"social-media/auth"
 	"social-media/database"
-	"strings"
+	"social-media/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,31 +15,19 @@ func GetUserInfo(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.String(400, "no token")
-		return
 	}
-	id, login, err := auth.TokenCredentials(token)
+	user, err := models.ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		c.String(400, "invalid credentials")
-		return
 	}
-	conn := database.PostgreConn
-	var firstName string
-	var secondName string
-	var bio string
-	var interests string
-	err = conn.QueryRow(context.Background(), "select first_name, second_name, bio, interests from users where id=$1", id).Scan(&firstName, &secondName, &bio, &interests)
+
+	user, err = models.Load(user.Login)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
 	}
-	c.JSON(200, gin.H{
-		"login":      login,
-		"firstName":  firstName,
-		"secondName": secondName,
-		"bio":        bio,
-		"interests":  interests,
-	})
+	c.JSON(200, user)
 }
 
 func ChangeUserInfo(c *gin.Context) {
@@ -47,22 +35,20 @@ func ChangeUserInfo(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.String(400, "no token")
-		return
 	}
-	id, _, err := auth.TokenCredentials(token)
+
+	user, err := models.ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		c.String(400, "invalid credentials")
-		return
 	}
-	firstName := c.PostForm("firstName")
-	secondName := c.PostForm("secondName")
-	bio := c.PostForm("bio")
-	interests := c.PostForm("interests")
 
-	conn := database.PostgreConn
-	_, err = conn.Exec(context.Background(), "update users set first_name=$1, second_name=$2, bio=$3, interests=$4 where id=$5", firstName, secondName, bio, interests, id)
-	if err != nil {
+	user.FirstName = c.PostForm("firstName")
+	user.SecondName = c.PostForm("secondName")
+	user.Bio = c.PostForm("bio")
+	user.Interests = c.PostForm("interests")
+
+	if err = user.Update(); err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
 	}
@@ -71,28 +57,12 @@ func ChangeUserInfo(c *gin.Context) {
 func GetUserByInfo(c *gin.Context) {
 	word := c.PostForm("word")
 
-	conn := database.PostgreConn
-	rows, err := conn.Query(context.Background(), "select login from users where interests like $1 or bio like $1", "%"+word+"%")
+	logins, err := models.GetByInfo(word)
 	if err != nil {
 		log.Println(err)
-		c.String(500, "internal error")
+		c.JSON(500, "internal error")
 	}
-
-	var sb strings.Builder
-	for rows.Next() {
-		var login string
-		err = rows.Scan(&login)
-		if err != nil {
-			continue
-		}
-		sb.WriteString(",")
-		sb.WriteString(login)
-	}
-	res := sb.String()
-	if len(res) > 0 {
-		res = res[1:]
-	}
-	c.JSON(200, res)
+	c.JSON(200, logins)
 }
 
 func getLogin(c *gin.Context) (string, error) {
@@ -115,13 +85,15 @@ func GetMissedPosts(c *gin.Context) {
 		c.String(400, "no token")
 		return
 	}
-	id, _, err := auth.TokenCredentials(token)
+
+	user, err := models.ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		c.String(400, "invalid credentials")
 		return
 	}
-	following, err := getFollowingLogins(id)
+
+	users, err := user.Followed()
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
@@ -130,25 +102,24 @@ func GetMissedPosts(c *gin.Context) {
 
 	res := make(map[string]int)
 
-	for _, user := range following {
-		userId, err := getIdByLogin(user)
+	for _, followed := range users {
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		count, err := countPosts("posts", "userId", userId)
+		count, err := countPosts("posts", "userId", followed.ID)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 		conn := database.PostgreConn
 		var readNum int
-		row := conn.QueryRow(context.Background(), "select read from followers where user_id=$1 and follower_id=$2", userId, id)
+		row := conn.QueryRow(context.Background(), "select read from followers where user_id=$1 and follower_id=$2", followed.ID, user.ID)
 		if err := row.Scan(&readNum); err != nil {
 			log.Println(err)
 			continue
 		}
-		res[user] = int(count) - readNum
+		res[user.Login] = int(count) - readNum
 	}
 
 	log.Println(res)

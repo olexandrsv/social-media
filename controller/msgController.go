@@ -241,7 +241,7 @@ func generateMsgRequest(text string, id, roomId int, images, files []string) bso
 func getMsgs(id int) ([]bson.M, error) {
 	coll := database.MI.DB.Collection("messages")
 	var res []bson.M
-	cursor, err := coll.Find(context.Background(), bson.D{{"roomId", id}})
+	cursor, err := coll.Find(context.Background(), bson.D{{Key: "roomId", Value: id}})
 	if err != nil {
 		return nil, err
 	}

@@ -13,14 +13,14 @@ type roomMap struct {
 	data map[int]*Room
 }
 
-func (rooms roomMap) Get(key int) (*Room, bool) {
+func (rooms *roomMap) Get(key int) (*Room, bool) {
 	rooms.mux.RLock()
 	defer rooms.mux.RUnlock()
 	room, ok := rooms.data[key]
 	return room, ok
 }
 
-func (rooms roomMap) Set(key int, value *Room) {
+func (rooms *roomMap) Set(key int, value *Room) {
 	rooms.mux.Lock()
 	defer rooms.mux.Unlock()
 	rooms.data[key] = value

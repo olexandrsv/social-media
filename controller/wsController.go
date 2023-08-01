@@ -45,7 +45,7 @@ func UpgradeToWS(c *gin.Context) {
 		user.Conn = conn
 	} else {
 		newUsers := &models.User{
-			Id:    id,
+			ID:    id,
 			Login: login,
 			Conn:  conn,
 		}
