@@ -47,35 +47,35 @@ func main() {
 		dir, file := path.Split(c.Request.RequestURI)
 		ext := filepath.Ext(file)
 		if file == "" || ext == "" {
-			c.File("./entrance/dist/entrance/index.html")
+			c.File("./entrance/index.html")
 		} else {
-			c.File("./entrance/dist/entrance" + path.Join(dir, file))
+			c.File("./entrance" + path.Join(dir, file))
 		}
 	})
 
-	routes.POST("/register", controller.RegisterUser)
-	routes.POST("/login", controller.UserLogin)
+	//routes.POST("/register", users.RegisterUser)
+	//routes.POST("/login", users.UserLogin)
 
 	authorized := routes.Group("/", middleware.Auth)
 	authorized.GET("/ws", controller.UpgradeToWS)
 	authorized.Static("/upload", "./upload/")
 
-	authorized.GET("/info", controller.GetUserInfo)
-	authorized.PUT("/info", controller.ChangeUserInfo)
-	authorized.POST("/filter", controller.GetUserByInfo)
+	//authorized.GET("/info", users.GetUserInfo)
+	//authorized.PUT("/info", users.ChangeUserInfo)
+	//authorized.POST("/filter", users.GetUserByInfo)
 
 	authorized.GET("/missed", controller.GetMissedPosts)
 	authorized.GET("/missed-msg", controller.GetMissedMsg)
 
-	authorized.POST("/follow/:login", controller.FollowUser)
-	authorized.GET("/follow/:login", controller.GetFollowedInfo)
+	//authorized.POST("/follow/:login", users.FollowUser)
+	//authorized.GET("/follow/:login", users.GetFollowedInfo)
 
 	authorized.POST("/post", controller.PostMessage)
 	authorized.PUT("/post", controller.ChangeMessage)
 	authorized.GET("/post", controller.GetNPosts)
 	authorized.GET("/post/:login", controller.GetOtherPosts)
 
-	authorized.GET("/follow", controller.FollowingAccounts)
+	//authorized.GET("/follow", users.FollowingAccounts)
 
 	authorized.POST("/comment", controller.PostComment)
 	authorized.GET("/comment/:postId", controller.GetComments)

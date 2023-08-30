@@ -7,6 +7,7 @@ import (
 	"social-media/database"
 	"social-media/models"
 	"strings"
+	users2 "social-media/users"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +37,7 @@ func NewRoom(c *gin.Context) {
 
 	var userIds []int
 	for _, user := range users {
-		userId, err := models.GetIdByLogin(user)
+		userId, err := users2.GetIdByLogin(user)
 		if err != nil {
 			continue
 		}

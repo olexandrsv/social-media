@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"social-media/auth"
 	"social-media/database"
-	"social-media/models"
+	"social-media/users"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -59,7 +59,7 @@ func PostMessage(c *gin.Context) {
 	}
 
 	postId := idToHex(result.InsertedID)
-	following, err := getFollowingIds(id)
+	following, err := GetFollowingIds(id)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
@@ -71,7 +71,7 @@ func PostMessage(c *gin.Context) {
 	req["type"] = "post"
 
 	for _, user := range following {
-		if user, ok := models.ActiveUsers.Get(user); ok {
+		if user, ok := users.ActiveUsers.Get(user); ok {
 			user.Conn.WriteJSON(req)
 		}
 	}
@@ -127,6 +127,54 @@ func ChangeMessage(c *gin.Context) {
 	}
 }
 
+func GetMissedPosts(c *gin.Context) {
+	token, err := c.Cookie("token")
+	if err != nil {
+		log.Println(err)
+		c.String(400, "no token")
+		return
+	}
+	id, _, err := auth.TokenCredentials(token)
+	if err != nil {
+		log.Println(err)
+		c.String(400, "invalid credentials")
+		return
+	}
+	following, err := getFollowingLogins(id)
+	if err != nil {
+		log.Println(err)
+		c.String(500, "internal error")
+		return
+	}
+
+	res := make(map[string]int)
+
+	for _, user := range following {
+		userId, err := getIdByLogin(user)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		count, err := countPosts("posts", "userId", userId)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		conn := database.PostgreConn
+		var readNum int
+		row := conn.QueryRow(context.Background(), "select read from followers where user_id=$1 and follower_id=$2", userId, id)
+		if err := row.Scan(&readNum); err != nil {
+			log.Println(err)
+			continue
+		}
+		res[user] = int(count) - readNum
+	}
+
+	log.Println(res)
+
+	c.JSON(200, res)
+}
+
 func GetNPosts(c *gin.Context) {
 	token, err := c.Cookie("token")
 	if err != nil {
@@ -151,7 +199,7 @@ func GetNPosts(c *gin.Context) {
 
 func GetOtherPosts(c *gin.Context) {
 	login := c.Param("login")
-	id, err := models.GetIdByLogin(login)
+	id, err := users.GetIdByLogin(login)
 	if err != nil {
 		log.Println(err)
 		c.String(500, "internal error")
@@ -246,4 +294,54 @@ func generatePostRequest(text string, id int, images, files []string) bson.M {
 	}
 
 	return req
+}
+
+func getFollowingLogins(id int) ([]string, error) {
+	conn := database.PostgreConn
+	rows, err := conn.Query(context.Background(), "select login from users join followers on users.id = followers.user_id and followers.follower_id=$1", id)
+	if err != nil {
+		return nil, err
+	}
+
+	var following []string
+	for rows.Next() {
+		var user string
+		err = rows.Scan(&user)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		following = append(following, user)
+	}
+	return following, nil
+}
+
+func getIdByLogin(login string) (int, error) {
+	var id int
+	conn := database.PostgreConn
+	err := conn.QueryRow(context.Background(), "select id from users where login=$1", login).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func GetFollowingIds(id int) ([]int, error) {
+	conn := database.PostgreConn
+	rows, err := conn.Query(context.Background(), "select follower_id from followers where user_id=$1", id)
+	if err != nil {
+		return nil, err
+	}
+
+	var following []int
+	for rows.Next() {
+		var user int
+		err = rows.Scan(&user)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		following = append(following, user)
+	}
+	return following, nil
 }
