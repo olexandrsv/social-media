@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"social-media/api/pb"
-
 	"google.golang.org/grpc"
 )
 

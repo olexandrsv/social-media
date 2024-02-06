@@ -1,10 +1,10 @@
 package users
 
 import (
-	"errors"
-	"fmt"
+	"log"
 	"social-media/common"
 	"social-media/hash"
+
 )
 
 type Service interface {
@@ -15,31 +15,45 @@ type Service interface {
 	GetLoginsByInfo(string) ([]string, error)
 	FollowUser(string, string) error
 	GetFollowedLogins(string) ([]string, error)
+	Log(error)
 }
 
 type userService struct {
-	repo Repository
-	auth common.AuthClient
+	repo   Repository
+	logger *log.Logger
+	auth   common.AuthClient
 }
 
-func NewService(r Repository, auth common.AuthClient) Service {
+func NewService(r Repository, logger *log.Logger, auth common.AuthClient) Service {
 	return &userService{
-		repo: r,
-		auth: auth,
+		repo:   r,
+		logger: logger,
+		auth:   auth,
 	}
 }
 
 func (s *userService) CreateUser(login, firstName, secondName, password string) (string, error) {
+	exists, err := s.repo.UserExists(login)
+	if err != nil {
+		s.Log(err)
+		return "", common.ErrInternal
+	}
+	if exists {
+		return "", common.ErrLoginExists
+	}
+
 	hashPsw, err := hash.HashPassword(password)
 	if err != nil {
-		return "", err
+		s.Log(err)
+		return "", common.ErrInternal
 	}
 
 	user := NewUser(login, WithFirstName(firstName), WithSecondName(secondName), WithPassword(hashPsw))
 
 	id, err := s.repo.SaveUser(user)
 	if err != nil {
-		return "", err
+		s.Log(err)
+		return "", common.ErrInternal
 	}
 
 	user.ID = id
@@ -47,19 +61,30 @@ func (s *userService) CreateUser(login, firstName, secondName, password string) 
 
 	token, err := s.auth.GenerateToken(user.ID, user.Login)
 	if err != nil {
-		return "", err
+		s.Log(err)
+		return "", common.ErrInternal
 	}
 	return token, nil
 }
 
 func (s *userService) Login(login, password string) (string, error) {
+	exists, err := s.repo.UserExists(login)
+	if err != nil {
+		s.Log(err)
+		return "", common.ErrInternal
+	}
+	if !exists {
+		return "", common.ErrWrongCredentials
+	}
+
 	id, encodedPassw, err := s.repo.GetCredentials(login)
 	if err != nil {
-		return "", err
+		s.Log(err)
+		return "", common.ErrInternal
 	}
-	
+
 	if !hash.CheckPassword(password, encodedPassw) {
-		return "", errors.New("forbidden")
+		return "", common.ErrWrongCredentials
 	}
 
 	user := NewUser(login, WithID(id))
@@ -67,52 +92,81 @@ func (s *userService) Login(login, password string) (string, error) {
 
 	token, err := s.auth.GenerateToken(user.ID, user.Login)
 	if err != nil {
-		return "", err
+		s.Log(err)
+		return "", common.ErrInternal
 	}
 	return token, nil
 }
 
-func (s *userService) GetUser(login string) (*User, error){
-	user, err := s.repo.GetUser(login)
-	if err != nil{
-		return nil, err
+func (s *userService) GetUser(login string) (*User, error) {
+	exists, err := s.repo.UserExists(login)
+	if err != nil {
+		s.Log(err)
+		return nil, common.ErrInternal
 	}
-	fmt.Println(user)
+	if !exists {
+		return nil, common.ErrNotFound
+	}
+
+	user, err := s.repo.GetUser(login)
+	if err != nil {
+		s.Log(err)
+		return nil, common.ErrInternal
+	}
 	return user, nil
 }
 
-func (s *userService) UpdateUser(token, firstName, secondName, bio, interests string) error{
+func (s *userService) UpdateUser(token, firstName, secondName, bio, interests string) error {
 	id, login, err := s.auth.ValidateToken(token)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	user := NewUser(login, WithID(id), WithFirstName(firstName), WithSecondName(secondName), 
+	user := NewUser(login, WithID(id), WithFirstName(firstName), WithSecondName(secondName),
 		WithBio(bio), WithInterests(interests))
 
 	err = s.repo.UpdateUser(user)
-	return err
+	if err != nil {
+		s.Log(err)
+		return common.ErrInternal
+	}
+	return nil
 }
 
-func (s *userService) GetLoginsByInfo(info string) ([]string, error){
-	return s.repo.GetLoginsByInfo(info)
+func (s *userService) GetLoginsByInfo(info string) ([]string, error) {
+	logins, err := s.repo.GetLoginsByInfo(info)
+	if err != nil {
+		s.Log(err)
+		return nil, common.ErrInternal
+	}
+	return logins, nil
 }
 
-func (s *userService) FollowUser(token, followedLogin string) error{
+func (s *userService) FollowUser(token, followedLogin string) error {
 	id, _, err := s.auth.ValidateToken(token)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	followedID, err := s.repo.GetIdByLogin(followedLogin)
-	if err != nil{
-		return err
+	err = s.repo.Subscribe(id, followedLogin)
+	if err != nil {
+		s.Log(err)
+		return common.ErrInternal
 	}
-	return s.repo.Subscribe(id, followedID)
+	return nil
 }
 
-func (s *userService) GetFollowedLogins(token string) ([]string, error){
+func (s *userService) GetFollowedLogins(token string) ([]string, error) {
 	id, _, err := s.auth.ValidateToken(token)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetFollowedLogins(id)
+	logins, err := s.repo.GetFollowedLogins(id)
+	if err != nil{
+		s.Log(err)
+		return nil, common.ErrInternal
+	}
+	return logins, nil
+}
+
+func (s *userService) Log(err error) {
+	s.logger.Println(err)
 }

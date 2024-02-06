@@ -2,23 +2,25 @@ package main
 
 import (
 	"log"
-	"net"
-	"social-media/api/pb"
+	"os"
 	"social-media/authentication"
-
-	"google.golang.org/grpc"
+	"social-media/authentication/endpoint"
+	"social-media/authentication/transport"
 )
 
 func main() {
-	listener, err := net.Listen("tcp", ":5051")
-	if err != nil{
-		log.Println(err)
+	logger := NewLogger("../../log.txt")
+	s := authentication.NewService(logger)
+	endpoints := endpoint.NewEndpoints(s)
+	server := transport.NewGRPCServer(endpoints)
+	server.Run()
+}
+
+func NewLogger(path string) *log.Logger {
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0660)
+	if err != nil {
+		log.Fatal("Failed to open log file")
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterAuthenticateServer(s, authentication.NewServer())
-
-	if err := s.Serve(listener); err != nil{
-		log.Println(err)
-	}
+	return log.New(file, "Auth microservice: ", log.Ldate|log.Ltime|log.Lshortfile)
 }

@@ -9,7 +9,6 @@ type CreateUserReq struct {
 
 type AuthResp struct {
 	Token string `json:"token"`
-	Error string `json:"error"`
 }
 
 type LoginReq struct {

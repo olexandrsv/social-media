@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"github.com/pkg/errors"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -11,7 +12,7 @@ import (
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 
 	hash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)

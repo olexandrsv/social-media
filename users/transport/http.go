@@ -3,78 +3,119 @@ package transport
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"log"
 	"net/http"
+	"social-media/common"
 	"social-media/users/endpoint"
+
+	"github.com/pkg/errors"
 
 	transport "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 )
 
-func NewHTTPServer(endpoints endpoint.Endpoints) http.Handler {
+type server struct {
+	endpoints endpoint.Endpoints
+	router *mux.Router
+}
+
+func newServer(e endpoint.Endpoints, r *mux.Router) *server {
+	return &server{e, r}
+}
+
+func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	r := mux.NewRouter()
+	s := newServer(endpoints, r)
+
 	r.Use(middleware)
-	
+
 	r.Methods("POST").Path("/register").Handler(transport.NewServer(
 		endpoints.CreateUser,
-		decodeCreateUserReq,
-		encodeResponse,
+		s.decodeCreateUserReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("POST").Path("/login").Handler(transport.NewServer(
 		endpoints.Login,
-		decodeLoginReq,
-		encodeResponse,
+		s.decodeLoginReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("GET").Path("/info/{login}").Handler(transport.NewServer(
 		endpoints.GetUser,
-		decodeGetUserReq,
-		encodeResponse,
+		s.decodeGetUserReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("POST").Path("/info").Handler(transport.NewServer(
 		endpoints.UpdateUser,
-		decodeUpdateUserReq,
-		encodeResponse,
+		s.decodeUpdateUserReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("POST").Path("/filter").Handler(transport.NewServer(
 		endpoints.GetLoginsByInfo,
-		decodeGetLoginsByInfoReq,
-		encodeResponse,
+		s.decodeGetLoginsByInfoReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("POST").Path("/follow/{login}").Handler(transport.NewServer(
 		endpoints.FollowUser,
-		decodeFollowUserReq,
-		encodeResponse,
+		s.decodeFollowUserReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
 	r.Methods("GET").Path("/follow").Handler(transport.NewServer(
 		endpoints.GetFollowedLogins,
-		decodeGetFollowedLoginsReq,
-		encodeResponse,
+		s.decodeGetFollowedLoginsReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	return r
+	return s
+}
+
+func (s *server) Run() {
+	err := http.ListenAndServe(":8081", s.router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func middleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
-        next.ServeHTTP(w, r)
-    })
+		next.ServeHTTP(w, r)
+	})
 }
 
-func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
+	s.Log(err)
+	code := 500
+	msg := "Internal server error"
+	if e, ok := err.(common.Error); ok {
+		code = e.Code
+		msg = e.Message
+	}
+	w.WriteHeader(code)
+	w.Write([]byte(msg))
+}
+
+func (s *server) encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 
-func decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, error) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		return nil, err
+func (s *server) decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, error) {
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrInvalidData
 	}
 
 	return endpoint.CreateUserReq{
@@ -85,9 +126,10 @@ func decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, err
 	}, nil
 }
 
-func decodeLoginReq(_ context.Context, r *http.Request) (interface{}, error) {
-	if err := r.ParseMultipartForm(10<<20); err != nil {
-		return nil, err
+func (s *server) decodeLoginReq(_ context.Context, r *http.Request) (interface{}, error) {
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrInvalidData
 	}
 
 	return endpoint.LoginReq{
@@ -96,53 +138,57 @@ func decodeLoginReq(_ context.Context, r *http.Request) (interface{}, error) {
 	}, nil
 }
 
-func decodeGetUserReq(_ context.Context, r *http.Request) (interface{}, error){
+func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	params := mux.Vars(r)
 	login, ok := params["login"]
-	if !ok{
-		return nil, errors.New("login not present")
+	if !ok {
+		return nil, common.ErrNoLogin
 	}
 	return endpoint.GetUserReq{
 		Login: login,
 	}, nil
 }
 
-func decodeUpdateUserReq(_ context.Context, r *http.Request) (interface{}, error){
+func (s *server) decodeUpdateUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
-	if err != nil{
-		return nil, err
+	if err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrNoToken
 	}
-	if err := r.ParseMultipartForm(10<<20); err != nil {
-		return nil, err
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrInvalidData
 	}
 
 	return endpoint.UpdateUserReq{
-		Token: token.Value,
+		Token:      token.Value,
 		FirstName:  r.FormValue("first_name"),
 		SecondName: r.FormValue("second_name"),
-		Bio: r.FormValue("bio"),
-		Interests: r.FormValue("interests"),
+		Bio:        r.FormValue("bio"),
+		Interests:  r.FormValue("interests"),
 	}, nil
 }
 
-func decodeGetLoginsByInfoReq(_ context.Context, r *http.Request)(interface{}, error){
-	if err := r.ParseMultipartForm(10<<20); err != nil {
-		return nil, err
+func (s *server) decodeGetLoginsByInfoReq(_ context.Context, r *http.Request) (interface{}, error) {
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrInternal
 	}
 	return endpoint.GetUserByInfoReq{
 		Info: r.FormValue("info"),
 	}, nil
 }
 
-func decodeFollowUserReq(_ context.Context, r *http.Request)(interface{}, error){
+func (s *server) decodeFollowUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
-	if err != nil{
-		return nil, err
+	if err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrNoToken
 	}
 	params := mux.Vars(r)
 	login, ok := params["login"]
-	if !ok{
-		return nil, errors.New("login not present")
+	if !ok {
+		return nil, common.ErrNoLogin
 	}
 	return endpoint.FollowUserReq{
 		Token: token.Value,
@@ -150,12 +196,17 @@ func decodeFollowUserReq(_ context.Context, r *http.Request)(interface{}, error)
 	}, nil
 }
 
-func decodeGetFollowedLoginsReq(_ context.Context, r *http.Request) (interface{}, error){
+func (s *server) decodeGetFollowedLoginsReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
-	if err != nil{
-		return nil, err
+	if err != nil {
+		s.Log(errors.WithStack(err))
+		return nil, common.ErrNoToken
 	}
 	return endpoint.TokenReq{
 		Token: token.Value,
 	}, nil
+}
+
+func (s *server) Log(err error){
+	s.endpoints.Log(err)
 }
