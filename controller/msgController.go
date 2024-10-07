@@ -5,7 +5,7 @@ import (
 	"log"
 	"social-media/auth"
 	"social-media/database"
-	"social-media/users"
+	models "social-media/internal/users/domain/user"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -71,7 +71,7 @@ func ReceiveMessage(c *gin.Context) {
 		if user == id {
 			continue
 		}
-		if user, ok := users.ActiveUsers.Get(user); ok {
+		if user, ok := models.ActiveUsers.Get(user); ok {
 			user.Conn.WriteJSON(req)
 		}
 	}

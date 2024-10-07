@@ -6,54 +6,54 @@ import (
 	"social-media/auth"
 	"social-media/database"
 	"social-media/models"
-	"strings"
-	users2 "social-media/users"
+	_ "strings"
+	//users2 "social-media/users"
 
 	"github.com/gin-gonic/gin"
 )
 
 func NewRoom(c *gin.Context) {
-	token, err := c.Cookie("token")
-	if err != nil {
-		log.Println(err)
-		c.String(400, "no token")
-		return
-	}
-	_, login, err := auth.TokenCredentials(token)
-	if err != nil {
-		c.String(400, "invalid credentials")
-		return
-	}
+	// token, err := c.Cookie("token")
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(400, "no token")
+	// 	return
+	// }
+	// _, login, err := auth.TokenCredentials(token)
+	// if err != nil {
+	// 	c.String(400, "invalid credentials")
+	// 	return
+	// }
 
-	name := c.PostForm("name")
-	list := c.PostForm("users")
-	users := strings.Split(list, ", ")
-	users = append(users, login)
+	// name := c.PostForm("name")
+	// list := c.PostForm("users")
+	// users := strings.Split(list, ", ")
+	// users = append(users, login)
 
-	var roomId int
+	// var roomId int
 
-	conn := database.PostgreConn
-	conn.QueryRow(context.Background(), "insert into rooms (name) values ($1) returning id", name).Scan(&roomId)
+	// conn := database.PostgreConn
+	// conn.QueryRow(context.Background(), "insert into rooms (name) values ($1) returning id", name).Scan(&roomId)
 
-	var userIds []int
-	for _, user := range users {
-		userId, err := users2.GetIdByLogin(user)
-		if err != nil {
-			continue
-		}
-		conn.Exec(context.Background(), "insert into urooms (room_id, user_id) values ($1, $2)", roomId, userId)
-		conn.Exec(context.Background(), "insert into read_msg (room_id, user_id, count) values ($1, $2, $3)", roomId, userId, 0)
-		userIds = append(userIds, userId)
-	}
+	// var userIds []int
+	// for _, user := range users {
+	// 	userId, err := users2.GetIdByLogin(user)
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	conn.Exec(context.Background(), "insert into urooms (room_id, user_id) values ($1, $2)", roomId, userId)
+	// 	conn.Exec(context.Background(), "insert into read_msg (room_id, user_id, count) values ($1, $2, $3)", roomId, userId, 0)
+	// 	userIds = append(userIds, userId)
+	// }
 
-	room := &models.Room{
-		Id:    roomId,
-		Name:  name,
-		Users: userIds,
-	}
-	models.ActiveRoom.Set(roomId, room)
+	// room := &models.Room{
+	// 	Id:    roomId,
+	// 	Name:  name,
+	// 	Users: userIds,
+	// }
+	// models.ActiveRoom.Set(roomId, room)
 
-	c.JSON(200, room)
+	// c.JSON(200, room)
 }
 
 func GetRooms(c *gin.Context) {

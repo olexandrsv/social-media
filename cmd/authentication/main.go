@@ -3,14 +3,14 @@ package main
 import (
 	"log"
 	"os"
-	"social-media/authentication"
-	"social-media/authentication/endpoint"
-	"social-media/authentication/transport"
+	"social-media/internal/authentication/service"
+	"social-media/internal/authentication/endpoint"
+	"social-media/internal/authentication/transport"
 )
 
 func main() {
 	logger := NewLogger("../../log.txt")
-	s := authentication.NewService(logger)
+	s := service.NewService(logger)
 	endpoints := endpoint.NewEndpoints(s)
 	server := transport.NewGRPCServer(endpoints)
 	server.Run()

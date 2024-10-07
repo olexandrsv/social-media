@@ -7,7 +7,7 @@ import (
 	"social-media/auth"
 	"social-media/database"
 	"social-media/models"
-	"social-media/users"
+	models2 "social-media/internal/users/domain/user"
 	"social-media/ws"
 
 	"github.com/gin-gonic/gin"
@@ -42,15 +42,12 @@ func UpgradeToWS(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
-	if user, ok := users.ActiveUsers.Get(id); ok {
+	if user, ok := models2.ActiveUsers.Get(id); ok {
 		user.Conn = conn
 	} else {
-		newUsers := &users.User{
-			ID:    id,
-			Login: login,
-			Conn:  conn,
-		}
-		users.ActiveUsers.Set(id, newUsers)
+		newUsers := models2.NewUser(id, login)
+		newUsers.Conn = conn
+		models2.ActiveUsers.Set(id, newUsers)
 	}
 
 	var ids []int

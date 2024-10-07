@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"social-media/auth"
 	"social-media/database"
-	"social-media/users"
+	//"social-media/users"
+	models "social-media/internal/users/domain/user"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -71,7 +72,7 @@ func PostMessage(c *gin.Context) {
 	req["type"] = "post"
 
 	for _, user := range following {
-		if user, ok := users.ActiveUsers.Get(user); ok {
+		if user, ok := models.ActiveUsers.Get(user); ok {
 			user.Conn.WriteJSON(req)
 		}
 	}
@@ -198,49 +199,49 @@ func GetNPosts(c *gin.Context) {
 }
 
 func GetOtherPosts(c *gin.Context) {
-	login := c.Param("login")
-	id, err := users.GetIdByLogin(login)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
-	}
+	// login := c.Param("login")
+	// id, err := users.GetIdByLogin(login)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(500, "internal error")
+	// 	return
+	// }
 
-	token, err := c.Cookie("token")
-	if err != nil {
-		log.Println(err)
-		c.String(400, "no token")
-		return
-	}
-	customerId, _, err := auth.TokenCredentials(token)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
-	}
+	// token, err := c.Cookie("token")
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(400, "no token")
+	// 	return
+	// }
+	// customerId, _, err := auth.TokenCredentials(token)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(500, "internal error")
+	// 	return
+	// }
 
-	posts, err := getPosts(id)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
-	}
+	// posts, err := getPosts(id)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(500, "internal error")
+	// 	return
+	// }
 
-	num, err := countPosts("posts", "userId", id)
-	if err != nil {
-		c.String(500, "internal error")
-		return
-	}
+	// num, err := countPosts("posts", "userId", id)
+	// if err != nil {
+	// 	c.String(500, "internal error")
+	// 	return
+	// }
 
-	conn := database.PostgreConn
-	_, err = conn.Exec(context.Background(), "update followers set read=$1 where user_id=$2 and follower_id=$3", num, id, customerId)
-	if err != nil {
-		log.Println(err)
-		c.String(500, "internal error")
-		return
-	}
+	// conn := database.PostgreConn
+	// _, err = conn.Exec(context.Background(), "update followers set read=$1 where user_id=$2 and follower_id=$3", num, id, customerId)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	c.String(500, "internal error")
+	// 	return
+	// }
 
-	c.JSON(200, posts)
+	// c.JSON(200, posts)
 }
 
 func countPosts(collection, key string, value int) (int64, error) {

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "api/pb/log";
+
+service Log{
+    rpc Error(LogRequest) returns (Empty){}
+}
+
+message LogRequest{
+    string msg = 1;
+}
+
+message Empty{}
