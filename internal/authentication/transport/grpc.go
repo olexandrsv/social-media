@@ -4,6 +4,7 @@ import (
 	"net"
 	"social-media/api/pb/auth"
 	"social-media/internal/authentication/endpoint"
+	"social-media/internal/common/app/log"
 
 	"google.golang.org/grpc"
 )
@@ -26,16 +27,12 @@ func NewGRPCServer(endpoints endpoint.Endpoints) *server {
 func (s *server) Run() {
 	listener, err := net.Listen("tcp", ":5051")
 	if err != nil {
-		s.Log(err)
+		log.Error(err)
 		panic(err)
 	}
 
 	if err := s.srv.Serve(listener); err != nil {
-		s.Log(err)
+		log.Error(err)
 		panic(err)
 	}
-}
-
-func (s *server) Log(err error) {
-	s.endpoints.Log(err)
 }

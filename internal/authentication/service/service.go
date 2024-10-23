@@ -1,8 +1,8 @@
 package service
 
 import (
-	"log"
 	"social-media/internal/common"
+	"social-media/internal/common/app/log"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,17 +21,13 @@ type JWTClaim struct {
 type Service interface {
 	GenerateToken(int, string) (string, error)
 	ValidateToken(string) (int, string, error)
-	Log(error)
 }
 
 type authService struct {
-	logger *log.Logger
 }
 
-func NewService(logger *log.Logger) Service {
-	return &authService{
-		logger: logger,
-	}
+func New() Service {
+	return &authService{}
 }
 
 func (s *authService) GenerateToken(id int, login string) (string, error) {
@@ -46,7 +42,7 @@ func (s *authService) GenerateToken(id int, login string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		s.Log(errors.WithStack(err))
+		log.Error(errors.WithStack(err))
 		return "", common.ErrInternal
 	}
 	return tokenString, nil
@@ -55,18 +51,14 @@ func (s *authService) GenerateToken(id int, login string) (string, error) {
 func (s *authService) ValidateToken(signedToken string) (int, string, error) {
 	claims, err := parseToken(signedToken)
 	if err != nil {
-		s.Log(err)
+		log.Error(err)
 		return 0, "", common.ErrInvalidToken
 	}
 	if claims.ExpiresAt < time.Now().Local().Unix() {
-		s.Log(errors.New("token expired"))
+		log.Error(errors.New("token expired"))
 		return claims.ID, claims.Login, common.ErrInvalidToken
 	}
 	return claims.ID, claims.Login, nil
-}
-
-func (s *authService) Log(err error) {
-	s.logger.Println(err.Error())
 }
 
 func parseToken(signedToken string) (*JWTClaim, error) {

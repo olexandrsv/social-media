@@ -70,7 +70,7 @@ func main() {
 	//authorized.POST("/follow/:login", users.FollowUser)
 	//authorized.GET("/follow/:login", users.GetFollowedInfo)
 
-	authorized.POST("/post", controller.PostMessage)
+	//authorized.POST("/post", controller.PostMessage)
 	authorized.PUT("/post", controller.ChangeMessage)
 	authorized.GET("/post", controller.GetNPosts)
 	authorized.GET("/post/:login", controller.GetOtherPosts)

@@ -6,9 +6,24 @@ import (
 	"testing"
 )
 
-func InitUsersService() {
-	config.InitUsersConfig()
+func defaultInit(cfg *config.Config){
+	cfg.InitAuth()
+	cfg.InitLog()
 	log.Init()
+}
+
+func InitUsersService() {
+	cfg := config.New()
+	defaultInit(cfg)
+	cfg.InitUsers()
+	cfg.InitPostgres()
+}
+
+func InitPostsService(){
+	cfg := config.New()
+	defaultInit(cfg)
+	cfg.InitPosts()
+	cfg.InitMongo()
 }
 
 func InitMock(c config.AppConfig, t testing.TB){

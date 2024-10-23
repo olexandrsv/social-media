@@ -2,23 +2,26 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"social-media/auth"
 	"social-media/database"
 	"social-media/models"
 	_ "strings"
+
 	//users2 "social-media/users"
 
 	"github.com/gin-gonic/gin"
 )
 
 func NewRoom(c *gin.Context) {
-	// token, err := c.Cookie("token")
-	// if err != nil {
-	// 	log.Println(err)
-	// 	c.String(400, "no token")
-	// 	return
-	// }
+	token, err := c.Cookie("token")
+	if err != nil {
+		log.Println(err)
+		c.String(400, "no token")
+		return
+	}
+	fmt.Println(token)
 	// _, login, err := auth.TokenCredentials(token)
 	// if err != nil {
 	// 	c.String(400, "invalid credentials")

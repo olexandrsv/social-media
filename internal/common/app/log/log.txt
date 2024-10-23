@@ -1,0 +1,21 @@
+
+2024/10/19 17:31:31 service.go:34: run posts service
+2024/10/19 17:35:00 service.go:34: run posts service
+2024/10/19 17:37:59 service.go:34: run posts service
+2024/10/19 17:39:28 service.go:34: run posts service
+2024/10/19 17:43:12 service.go:34: run posts service
+2024/10/19 17:47:11 service.go:34: run posts service
+2024/10/19 17:57:29 service.go:34: run posts service
+2024/10/19 17:57:40 service.go:34: token
+2024/10/19 18:01:16 service.go:34: run posts service
+2024/10/19 18:01:28 service.go:34: createUserReq
+2024/10/19 18:01:28 service.go:34: cookie:token
+2024/10/19 18:01:28 service.go:34: here
+2024/10/19 19:24:48 service.go:34: createUserReq
+2024/10/19 19:24:48 service.go:34: cookie:token
+2024/10/19 19:24:48 service.go:34: here
+2024/10/19 20:30:44 service.go:34: run posts service
+2024/10/19 20:37:51 service.go:34: run posts service
+2024/10/19 20:39:01 service.go:34: run posts service
+2024/10/22 11:39:24 service.go:34: run posts service
+2024/10/22 11:42:37 service.go:34: run posts service

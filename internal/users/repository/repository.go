@@ -28,11 +28,11 @@ type repo struct {
 }
 
 func New() Repository {
-	user := config.App.Database.User
-	password := config.App.Database.Password
-	host := config.App.Database.Host
-	port := config.App.Database.Port
-	name := config.App.Database.Name
+	user := config.App.PostgresDB.User
+	password := config.App.PostgresDB.Password
+	host := config.App.PostgresDB.Host
+	port := config.App.PostgresDB.Port
+	name := config.App.PostgresDB.Name
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
 	db, err := sql.Open("postgres", url)
 	if err != nil {
@@ -83,7 +83,7 @@ func (r *repo) GetUser(login string) (*user.User, error) {
 }
 
 func (r *repo) UpdateUser(u *user.User) error {
-	sql := `update users set first_name=?, second_name=?, bio=?, interests=? where id=?`
+	sql := `update users set first_name=$1, second_name=$2, bio=$3, interests=$4 where id=$5`
 	_, err := r.db.Exec(sql, u.Name(), u.Surname(), u.Bio(), u.Interests(), u.ID())
 	if err != nil {
 		return errors.WithStack(err)
