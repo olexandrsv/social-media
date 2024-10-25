@@ -9,6 +9,7 @@ import (
 
 type Service interface {
 	CreatePost(token, text string, filesPaths, imagesPaths []string) (*post.Post, error)
+	OwnPosts(string) ([]*post.Post, error)
 }
 
 type postsService struct {
@@ -39,4 +40,12 @@ func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []
 		return nil, err
 	}
 	return post, nil
+}
+
+func (s *postsService) OwnPosts(token string) ([]*post.Post, error) {
+	id, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.UserPosts(id)
 }

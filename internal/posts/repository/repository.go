@@ -9,6 +9,7 @@ import (
 	"social-media/internal/posts/domain/post"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -16,6 +17,7 @@ import (
 
 type Repository interface {
 	CreatePost(PostModel) (*post.Post, error)
+	UserPosts(int) ([]*post.Post, error)
 }
 
 type repo struct {
@@ -53,7 +55,7 @@ func New() Repository {
 }
 
 func (r *repo) CreatePost(postModel PostModel) (*post.Post, error) {
-	coll := r.DB.Collection("mock")
+	coll := r.DB.Collection("posts")
 	res, err := coll.InsertOne(context.Background(), postModel)
 	if err != nil {
 		log.Error(err)
@@ -65,4 +67,27 @@ func (r *repo) CreatePost(postModel PostModel) (*post.Post, error) {
 	post := post.New(id, postModel.UserID, post.WithText(postModel.Text),
 		post.WithFilesPaths(postModel.FilesPath), post.WithImagesPaths(postModel.ImagesPath))
 	return post, nil
+}
+
+func (r *repo) UserPosts(userID int) ([]*post.Post, error){
+	coll := r.DB.Collection("posts")
+	filter := bson.D{{Key: "userId", Value: userID}}
+	cursor, err := coll.Find(context.Background(), filter)
+	if err != nil{
+		log.Error(err)
+		return nil, common.ErrInternal
+	}
+	var postModels []PostModel
+	if err := cursor.All(context.Background(), &postModels); err != nil{
+		log.Error(err)
+		return nil, common.ErrInternal
+	}
+
+	posts := make([]*post.Post, 0, len(postModels))
+	for _, postModel := range postModels{
+		post := post.New(postModel.ID, postModel.UserID, post.WithText(postModel.Text),
+			post.WithImagesPaths(postModel.ImagesPath), post.WithFilesPaths(postModel.FilesPath))
+		posts = append(posts, post)
+	}
+	return posts, nil
 }

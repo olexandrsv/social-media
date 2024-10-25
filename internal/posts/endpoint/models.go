@@ -1,5 +1,9 @@
 package endpoint
 
+type Token struct {
+	Token string
+}
+
 type CreatePostReq struct {
 	Token      string
 	Text       string
@@ -7,7 +11,7 @@ type CreatePostReq struct {
 	ImagesPath []string
 }
 
-type CreatePostResp struct {
+type Post struct {
 	ID          string   `json:"_id"`
 	Text        string   `json:"text"`
 	FilesPaths  []string `json:"files"`

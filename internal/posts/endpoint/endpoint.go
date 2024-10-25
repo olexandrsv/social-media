@@ -10,6 +10,7 @@ import (
 
 type Endpoint interface {
 	CreatePost(ctx context.Context, request interface{}) (interface{}, error)
+	OwnPosts(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 type postsEndpoint struct {
@@ -33,10 +34,34 @@ func (e *postsEndpoint) CreatePost(ctx context.Context, request interface{}) (in
 	if err != nil {
 		return nil, err
 	}
-	return CreatePostResp{
+	return Post{
 		ID:          post.ID(),
 		Text:        post.Text(),
 		FilesPaths:  post.FilesPaths(),
 		ImagesPaths: post.ImagesPaths(),
 	}, nil
+}
+
+func (e *postsEndpoint) OwnPosts(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(Token)
+	if !ok {
+		log.Error(errors.New("can't assign to Token"))
+		return nil, common.ErrInternal
+	}
+
+	posts, err := e.s.OwnPosts(req.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	postModels := make([]Post, 0, len(posts))
+	for _, post := range posts {
+		postModels = append(postModels, Post{
+			ID:          post.ID(),
+			Text:        post.Text(),
+			FilesPaths:  post.FilesPaths(),
+			ImagesPaths: post.ImagesPaths(),
+		})
+	}
+	return postModels, nil
 }

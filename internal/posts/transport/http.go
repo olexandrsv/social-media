@@ -42,6 +42,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	r.Methods("GET").Path("/post").Handler(transport.NewServer(
+		e.OwnPosts,
+		s.decodeTokenReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 	return s
 }
 
@@ -97,7 +103,7 @@ func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (inte
 	}
 
 	return endpoint.CreatePostReq{
-		Token:      token.Value,
+		Token: token.Value,
 		Text:       r.FormValue("text"),
 		FilesPath:  filesPath,
 		ImagesPath: imagesPath,
@@ -130,6 +136,17 @@ func saveFile(h *multipart.FileHeader) error {
 		return err
 	}
 	return nil
+}
+
+func (s *server) decodeTokenReq(ctx context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(err)
+		return nil, common.ErrNoToken
+	}
+	return endpoint.Token{
+		Token: token.Value,
+	}, nil
 }
 
 func (s *server) encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
