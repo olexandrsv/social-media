@@ -8,7 +8,7 @@ import (
 	"social-media/internal/users/service"
 )
 
-type Endpoints interface{
+type Endpoints interface {
 	CreateUser(ctx context.Context, request interface{}) (interface{}, error)
 	Login(ctx context.Context, request interface{}) (interface{}, error)
 	GetUser(ctx context.Context, request interface{}) (interface{}, error)
@@ -30,7 +30,7 @@ func NewEndpoints(s service.Service) Endpoints {
 
 func (e usersEndpoints) CreateUser(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(CreateUserReq)
-	if !ok{
+	if !ok {
 		log.Error(errors.New("can't assign to CreateUserReq"))
 		return nil, common.ErrInternal
 	}
@@ -47,14 +47,14 @@ func (e usersEndpoints) CreateUser(ctx context.Context, request interface{}) (in
 		return nil, err
 	}
 	return AuthResp{
-		ID: id,
+		ID:    id,
 		Token: token,
 	}, nil
 }
 
 func (e usersEndpoints) Login(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(LoginReq)
-	if !ok{
+	if !ok {
 		log.Error(errors.New("can't assign to LoginReq"))
 		return nil, common.ErrInternal
 	}
@@ -66,11 +66,12 @@ func (e usersEndpoints) Login(ctx context.Context, request interface{}) (interfa
 		return nil, err
 	}
 
-	token, err := e.service.Login(req.Login, req.Password)
+	token, id, err := e.service.Login(req.Login, req.Password)
 	if err != nil {
 		return nil, err
 	}
 	return AuthResp{
+		ID:    id,
 		Token: token,
 	}, nil
 }
@@ -93,11 +94,11 @@ func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (inter
 		return nil, err
 	}
 	return &GetUserResp{
-		Login:      user.Login(),
-		Name:  user.Name(),
-		Surname: user.Surname(),
-		Bio:        user.Bio(),
-		Interests:  user.Interests(),
+		Login:     user.Login(),
+		Name:      user.Name(),
+		Surname:   user.Surname(),
+		Bio:       user.Bio(),
+		Interests: user.Interests(),
 	}, nil
 }
 
@@ -125,9 +126,9 @@ func (e usersEndpoints) GetUsersByInfo(ctx context.Context, request interface{})
 		return nil, err
 	}
 	userModels := make([]UserModel, 0, len(users))
-	for _, user := range users{
+	for _, user := range users {
 		userModels = append(userModels, UserModel{
-			ID: user.ID(),
+			ID:    user.ID(),
 			Login: user.Login(),
 		})
 	}
@@ -156,4 +157,3 @@ func (e usersEndpoints) GetFollowedLogins(ctx context.Context, request interface
 	}
 	return LoginsResp{logins}, nil
 }
-

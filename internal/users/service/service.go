@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	CreateUser(string, string, string, string) (string, int, error)
-	Login(string, string) (string, error)
+	Login(string, string) (string, int, error)
 	GetUser(string) (*user.User, error)
 	UpdateUser(string, string, string, string, string) error
 	GetUsersByInfo(string) ([]*user.User, error)
@@ -59,14 +59,14 @@ func (s *userService) CreateUser(login, name, surname, password string) (string,
 	return token, user.ID(), nil
 }
 
-func (s *userService) Login(login, password string) (string, error) {
+func (s *userService) Login(login, password string) (string, int, error) {
 	id, encodedPassw, err := s.repo.GetCredentials(login)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	if !checkPassword(password, encodedPassw) {
-		return "", common.ErrWrongCredentials
+		return "", 0, common.ErrWrongCredentials
 	}
 
 	user := user.New(id, login)
@@ -74,9 +74,9 @@ func (s *userService) Login(login, password string) (string, error) {
 
 	token, err := s.auth.GenerateToken(user.ID(), user.Login())
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return token, nil
+	return token, user.ID(), nil
 }
 
 func (s *userService) GetUser(login string) (*user.User, error) {

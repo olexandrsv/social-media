@@ -37,7 +37,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	r.Methods("POST").Path("/login").Handler(transport.NewServer(
+	r.Methods("POST").Path("/users/login").Handler(transport.NewServer(
 		endpoints.Login,
 		s.decodeLoginReq,
 		s.encodeResponse,
