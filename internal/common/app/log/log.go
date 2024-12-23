@@ -41,7 +41,8 @@ type logClient struct {
 }
 
 func (c logClient) Error(err error) {
-	_, err = c.LogClient.Error(context.Background(), &log.LogRequest{Msg: err.Error()})
+	msg := fmt.Sprintf("%+v\n", err)
+	_, err = c.LogClient.Error(context.Background(), &log.LogRequest{Msg: msg})
 	if err != nil {
 		fmt.Println(err)
 	}

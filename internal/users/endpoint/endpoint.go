@@ -13,7 +13,7 @@ type Endpoints interface{
 	Login(ctx context.Context, request interface{}) (interface{}, error)
 	GetUser(ctx context.Context, request interface{}) (interface{}, error)
 	UpdateUser(ctx context.Context, request interface{}) (interface{}, error)
-	GetLoginsByInfo(ctx context.Context, request interface{}) (interface{}, error)
+	GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error)
 	FollowUser(ctx context.Context, request interface{}) (interface{}, error)
 	GetFollowedLogins(ctx context.Context, request interface{}) (interface{}, error)
 }
@@ -71,7 +71,11 @@ func (e usersEndpoints) Login(ctx context.Context, request interface{}) (interfa
 }
 
 func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (interface{}, error) {
-	req := request.(GetUserReq)
+	req, ok := request.(GetUserReq)
+	if !ok {
+		log.Error(errors.New("can't assign to GetUserReq"))
+		return nil, common.ErrInternal
+	}
 
 	v := common.NewValidator()
 	v.NotEmpty("login", req.Login)
@@ -93,7 +97,11 @@ func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (inter
 }
 
 func (e usersEndpoints) UpdateUser(ctx context.Context, request interface{}) (interface{}, error) {
-	req := request.(UpdateUserReq)
+	req, ok := request.(UpdateUserReq)
+	if !ok {
+		log.Error(errors.New("can't assign to UpdateUserReq"))
+		return nil, common.ErrInternal
+	}
 	err := e.service.UpdateUser(req.Token, req.Name, req.Surname, req.Bio, req.Interests)
 	if err != nil {
 		return UpdateUserResp{Error: err.Error()}, nil
@@ -101,23 +109,42 @@ func (e usersEndpoints) UpdateUser(ctx context.Context, request interface{}) (in
 	return UpdateUserResp{Error: ""}, nil
 }
 
-func (e usersEndpoints) GetLoginsByInfo(ctx context.Context, request interface{}) (interface{}, error) {
-	req := request.(GetLoginsByInfoReq)
-	logins, err := e.service.GetLoginsByInfo(req.Info)
+func (e usersEndpoints) GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(GetLoginsByInfoReq)
+	if !ok {
+		log.Error(errors.New("can't assign to GetLoginsByInfoReq"))
+		return nil, common.ErrInternal
+	}
+	users, err := e.service.GetUsersByInfo(req.Info)
 	if err != nil {
 		return nil, err
 	}
-	return LoginsResp{logins}, nil
+	userModels := make([]UserModel, 0, len(users))
+	for _, user := range users{
+		userModels = append(userModels, UserModel{
+			ID: user.ID(),
+			Login: user.Login(),
+		})
+	}
+	return userModels, nil
 }
 
 func (e usersEndpoints) FollowUser(ctx context.Context, request interface{}) (interface{}, error) {
-	req := request.(FollowUserReq)
+	req, ok := request.(FollowUserReq)
+	if !ok {
+		log.Error(errors.New("can't assign to FollowUserReq"))
+		return nil, common.ErrInternal
+	}
 	err := e.service.FollowUser(req.Token, req.Login)
 	return nil, err
 }
 
 func (e usersEndpoints) GetFollowedLogins(ctx context.Context, request interface{}) (interface{}, error) {
-	req := request.(TokenReq)
+	req, ok := request.(TokenReq)
+	if !ok {
+		log.Error(errors.New("can't assign to TokenReq"))
+		return nil, common.ErrInternal
+	}
 	logins, err := e.service.GetFollowedLogins(req.Token)
 	if err != nil {
 		return nil, err

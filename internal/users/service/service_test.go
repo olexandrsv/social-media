@@ -18,7 +18,7 @@ type mockRepo struct {
 	getUser           func(string) (*user.User, error)
 	updateUser        func(*user.User) error
 	userExists        func(string) (bool, error)
-	getLoginsByInfo   func(string) ([]string, error)
+	getUsersByInfo   func(string) ([]string, error)
 	subscribe         func(int, string) error
 	getFollowedLogins func(int) ([]string, error)
 }
@@ -43,8 +43,8 @@ func (r *mockRepo) UserExists(login string) (bool, error) {
 	return r.userExists(login)
 }
 
-func (r *mockRepo) GetLoginsByInfo(info string) ([]string, error) {
-	return r.getLoginsByInfo(info)
+func (r *mockRepo) GetUsersByInfo(info string) ([]string, error) {
+	return r.getUsersByInfo(info)
 }
 
 func (r *mockRepo) Subscribe(userID int, followedLogin string) error {

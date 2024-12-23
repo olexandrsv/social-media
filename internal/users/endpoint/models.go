@@ -56,3 +56,10 @@ type FollowUserReq struct {
 type TokenReq struct {
 	Token string
 }
+
+type UsersResp []UserModel
+
+type UserModel struct{
+	ID int
+	Login string
+}

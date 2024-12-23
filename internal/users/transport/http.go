@@ -30,7 +30,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 
 	r.Use(middleware)
 
-	r.Methods("POST").Path("/register").Handler(transport.NewServer(
+	r.Methods("POST").Path("/register").Queries().Handler(transport.NewServer(
 		endpoints.CreateUser,
 		s.decodeCreateUserReq,
 		s.encodeResponse,
@@ -59,7 +59,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	))
 
 	r.Methods("POST").Path("/filter").Handler(transport.NewServer(
-		endpoints.GetLoginsByInfo,
+		endpoints.GetUsersByInfo,
 		s.decodeGetLoginsByInfoReq,
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),

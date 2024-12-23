@@ -56,7 +56,7 @@ func newSqlMock(query Query, res QueryResult) (*sql.DB, sqlmock.Sqlmock, error) 
 }
 
 func TestCreateUser(t *testing.T) {
-	u := user.NewUser(2, "bob", user.WithName("Bob"),
+	u := user.New(2, "bob", user.WithName("Bob"),
 		user.WithSurname("Smith"), user.WithPassword("12her45j"))
 
 	userModel := NewUserModel(u.Login(), u.Name(), u.Surname(), u.Password())
@@ -118,7 +118,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestGetCredentials(t *testing.T) {
-	user := user.NewUser(12, "bob",
+	user := user.New(12, "bob",
 		user.WithPassword("iYX1Jc1jT+i4Fb2hz7us4/H2w3DL6wOrYNWXJqKJvovcbv7orTULJO843frjFt+B"))
 
 	query := Query{
@@ -178,7 +178,7 @@ func TestGetCredentials(t *testing.T) {
 }
 
 func TestGetUser(t *testing.T) {
-	u := user.NewUser(1, "bob", user.WithName("Bob"), user.WithSurname("Smith"),
+	u := user.New(1, "bob", user.WithName("Bob"), user.WithSurname("Smith"),
 		user.WithBio("student"), user.WithInterests("play chess"))
 
 	query := Query{
@@ -241,7 +241,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	u := user.NewUser(1, "bob", user.WithName("Bob"), user.WithSurname("Smith"),
+	u := user.New(1, "bob", user.WithName("Bob"), user.WithSurname("Smith"),
 		user.WithBio("student"), user.WithInterests("play chess"))
 
 	query := Query{
@@ -286,7 +286,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestUserExists(t *testing.T) {
-	u := user.NewUser(1, "bob")
+	u := user.New(1, "bob")
 
 	query := Query{
 		sql:  `select (.+) from users where login=?`,
@@ -362,49 +362,49 @@ func TestGetLoginsByInfo(t *testing.T) {
 
 	data := []struct {
 		queryRes  QueryResult
-		resLogins []string
+		resUsers []*user.User
 		resErr    error
 	}{
 		{
 			queryRes: QueryResult{
-				header: []string{"login"},
+				header: []string{"id", "login"},
 				data: [][]driver.Value{
-					{"bob"},
-					{"ben"},
-					{"bill"},
+					{1, "bob"},
+					{2, "ben"},
+					{3, "bill"},
 				},
 				err: nil,
 			},
-			resLogins: []string{"bob", "ben", "bill"},
+			resUsers: []*user.User{user.New(1, "bob"), user.New(2, "ben"), user.New(3, "bill")},
 			resErr:    nil,
 		},
 		{
 			queryRes: QueryResult{
-				header: []string{"login"},
+				header: []string{"id", "login"},
 				data: [][]driver.Value{
-					{"smith"},
+					{1, "smith"},
 				},
 				err: nil,
 			},
-			resLogins: []string{"smith"},
+			resUsers: []*user.User{user.New(1, "smith")},
 			resErr:    nil,
 		},
 		{
 			queryRes: QueryResult{
-				header: []string{"login"},
+				header: []string{"id", "login"},
 				data: [][]driver.Value{
 					{nil},
 				},
 				err: nil,
 			},
-			resLogins: nil,
+			resUsers: nil,
 			resErr:    scanErr,
 		},
 		{
 			queryRes: QueryResult{
 				err: e,
 			},
-			resLogins: nil,
+			resUsers: nil,
 			resErr:    e,
 		},
 	}
@@ -416,7 +416,7 @@ func TestGetLoginsByInfo(t *testing.T) {
 		}
 
 		r := repo{db}
-		logins, err := r.GetLoginsByInfo(info)
+		users, err := r.GetUsersByInfo(info)
 
 		if !errors.Is(err, d.resErr) && err.Error() != d.resErr.Error() {
 			t.Errorf("error: '%s' expected: %s", err, d.resErr)
@@ -426,17 +426,18 @@ func TestGetLoginsByInfo(t *testing.T) {
 			t.Errorf("there were unfulfilled expectations: %s", err)
 		}
 
-		for i, v := range logins {
-			if v != d.resLogins[i] {
-				t.Errorf("incorrect logins %v, expected: %v", logins, d.resLogins)
+		for i, user := range users {
+			expectedUser := d.resUsers[i]
+			if user.ID() != expectedUser.ID() || user.Name() != expectedUser.Name() {
+				t.Errorf("incorrect logins %+v, expected: %+v", *user, *expectedUser)
 			}
 		}
 	}
 }
 
 func TestSubsribe(t *testing.T) {
-	bob := user.NewUser(1, "bob")
-	ben := user.NewUser(2, "ben")
+	bob := user.New(1, "bob")
+	ben := user.New(2, "ben")
 
 	query := Query{
 		sql:  `insert into followers`, // (.+) values ((select id from users where login=?), ?)`,
@@ -479,7 +480,7 @@ func TestSubsribe(t *testing.T) {
 }
 
 func TestGetFollowedLogins(t *testing.T) {
-	u := user.NewUser(1, "bob")
+	u := user.New(1, "bob")
 	query := Query{
 		sql:  `select (.+) from users join followers on users.id = followers.user_id and followers.follower_id=?`,
 		t:    QueryRows,

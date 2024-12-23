@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"social-media/database"
-	"social-media/hash"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -22,20 +21,7 @@ type User struct {
 	Conn      *websocket.Conn
 }
 
-func New(login string, name string, surname string, password string) (*User, error) {
-	hashPsw, err := hash.HashPassword(password)
-	if err != nil {
-		return nil, err
-	}
-	return &User{
-		login:    login,
-		name:     name,
-		surname:  surname,
-		password: hashPsw,
-	}, nil
-}
-
-func NewUser(id int, login string, opts ...Option) *User {
+func New(id int, login string, opts ...Option) *User {
 	user := &User{
 		id:    id,
 		login: login,

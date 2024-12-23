@@ -1,3 +1,2 @@
-/config/*
-/internal/common/config/config.ini
+*.ini
 *.exe

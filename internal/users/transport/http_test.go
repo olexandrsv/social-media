@@ -19,7 +19,7 @@ type mockEndpoints struct {
 	login             func(context.Context, interface{}) (interface{}, error)
 	getUser           func(context.Context, interface{}) (interface{}, error)
 	updateUser        func(context.Context, interface{}) (interface{}, error)
-	getLoginsByInfo   func(context.Context, interface{}) (interface{}, error)
+	getUsersByInfo   func(context.Context, interface{}) (interface{}, error)
 	followUser        func(context.Context, interface{}) (interface{}, error)
 	getFollowedLogins func(context.Context, interface{}) (interface{}, error)
 }
@@ -49,11 +49,11 @@ func (e mockEndpoints) UpdateUser(ctx context.Context, request interface{}) (int
 	return e.updateUser(ctx, request)
 }
 
-func (e mockEndpoints) GetLoginsByInfo(ctx context.Context, request interface{}) (interface{}, error) {
-	if e.getLoginsByInfo == nil {
+func (e mockEndpoints) GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error) {
+	if e.getUsersByInfo == nil {
 		return nil, nil
 	}
-	return e.getLoginsByInfo(ctx, request)
+	return e.getUsersByInfo(ctx, request)
 }
 
 func (e mockEndpoints) FollowUser(ctx context.Context, request interface{}) (interface{}, error) {
@@ -352,7 +352,7 @@ func TestUpdateUser(t *testing.T) {
 	}
 }
 
-func TestGetLoginsByInfo(t *testing.T) {
+func TestGetUsersByInfo(t *testing.T) {
 	app.InitMock(config.AppConfig{}, t)
 	getBobsReq := endpoint.GetLoginsByInfoReq{Info: "Bob"}
 	getBobsResp := endpoint.LoginsResp{Logins: []string{"bob01", "bob02"}}
@@ -367,7 +367,7 @@ func TestGetLoginsByInfo(t *testing.T) {
 	}{
 		{
 			e: mockEndpoints{
-				getLoginsByInfo: func(ctx context.Context, request interface{}) (interface{}, error) {
+				getUsersByInfo: func(ctx context.Context, request interface{}) (interface{}, error) {
 					req, ok := request.(endpoint.GetLoginsByInfoReq)
 					if !ok {
 						t.Errorf("can't cast %+v to endpoint.GetLoginsByInfoReq", req)
@@ -385,7 +385,7 @@ func TestGetLoginsByInfo(t *testing.T) {
 		},
 		{
 			e: mockEndpoints{
-				getLoginsByInfo: func(ctx context.Context, request interface{}) (interface{}, error) {
+				getUsersByInfo: func(ctx context.Context, request interface{}) (interface{}, error) {
 					return nil, getBobsErr
 				},
 			},
