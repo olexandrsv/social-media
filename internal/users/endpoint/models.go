@@ -8,6 +8,7 @@ type CreateUserReq struct {
 }
 
 type AuthResp struct {
+	ID    int    `json:"id"`
 	Token string `json:"token"`
 }
 
@@ -59,7 +60,7 @@ type TokenReq struct {
 
 type UsersResp []UserModel
 
-type UserModel struct{
-	ID int
+type UserModel struct {
+	ID    int
 	Login string
 }

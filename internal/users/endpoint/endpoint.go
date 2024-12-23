@@ -42,11 +42,14 @@ func (e usersEndpoints) CreateUser(ctx context.Context, request interface{}) (in
 		return nil, err
 	}
 
-	token, err := e.service.CreateUser(req.Login, req.Name, req.Surname, req.Password)
+	token, id, err := e.service.CreateUser(req.Login, req.Name, req.Surname, req.Password)
 	if err != nil {
 		return nil, err
 	}
-	return AuthResp{token}, nil
+	return AuthResp{
+		ID: id,
+		Token: token,
+	}, nil
 }
 
 func (e usersEndpoints) Login(ctx context.Context, request interface{}) (interface{}, error) {
@@ -67,7 +70,9 @@ func (e usersEndpoints) Login(ctx context.Context, request interface{}) (interfa
 	if err != nil {
 		return nil, err
 	}
-	return AuthResp{token}, nil
+	return AuthResp{
+		Token: token,
+	}, nil
 }
 
 func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (interface{}, error) {

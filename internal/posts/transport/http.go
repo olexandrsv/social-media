@@ -3,7 +3,6 @@ package transport
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -52,7 +51,6 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 }
 
 func (s *server) Run() {
-	log.Error(errors.New("run posts service"))
 	err := http.ListenAndServe(":"+config.App.PostsService.Port, s.router)
 	if err != nil {
 		log.Error(err)
@@ -103,7 +101,7 @@ func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (inte
 	}
 
 	return endpoint.CreatePostReq{
-		Token: token.Value,
+		Token:      token.Value,
 		Text:       r.FormValue("text"),
 		FilesPath:  filesPath,
 		ImagesPath: imagesPath,

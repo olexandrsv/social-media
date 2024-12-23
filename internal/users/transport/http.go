@@ -30,7 +30,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 
 	r.Use(middleware)
 
-	r.Methods("POST").Path("/register").Queries().Handler(transport.NewServer(
+	r.Methods("POST").Path("/users").Queries().Handler(transport.NewServer(
 		endpoints.CreateUser,
 		s.decodeCreateUserReq,
 		s.encodeResponse,
@@ -92,6 +92,7 @@ func (s *server) Run() {
 func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
 		w.Header().Add("Access-Control-Allow-Credentials", "true")
 		next.ServeHTTP(w, r)
 	})
@@ -123,9 +124,9 @@ func (s *server) decodeCreateUserReq(ctx context.Context, r *http.Request) (inte
 
 	return endpoint.CreateUserReq{
 		Login:    r.FormValue("login"),
-		Name:     r.FormValue("first_name"),
-		Surname:  r.FormValue("second_name"),
-		Password: r.FormValue("passw1"),
+		Name:     r.FormValue("name"),
+		Surname:  r.FormValue("surname"),
+		Password: r.FormValue("password"),
 	}, nil
 }
 

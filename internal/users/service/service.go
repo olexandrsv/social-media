@@ -8,7 +8,7 @@ import (
 )
 
 type Service interface {
-	CreateUser(string, string, string, string) (string, error)
+	CreateUser(string, string, string, string) (string, int, error)
 	Login(string, string) (string, error)
 	GetUser(string) (*user.User, error)
 	UpdateUser(string, string, string, string, string) error
@@ -29,34 +29,34 @@ func New(r repository.Repository, auth common.AuthClient) Service {
 	}
 }
 
-func (s *userService) CreateUser(login, name, surname, password string) (string, error) {
+func (s *userService) CreateUser(login, name, surname, password string) (string, int, error) {
 	exists, err := s.repo.UserExists(login)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	if exists {
-		return "", common.ErrLoginExists
+		return "", 0, common.ErrLoginExists
 	}
 
 	hashPsw, err := hashPassword(password)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	userModel := repository.NewUserModel(login, name, surname, hashPsw)
 
 	user, err := s.repo.CreateUser(userModel)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	user.Register()
 
 	token, err := s.auth.GenerateToken(user.ID(), user.Login())
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return token, nil
+	return token, user.ID(), nil
 }
 
 func (s *userService) Login(login, password string) (string, error) {
