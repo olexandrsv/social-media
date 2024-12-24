@@ -26,6 +26,11 @@ func InitPostsService(){
 	cfg.InitMongo()
 }
 
+func InitAuthService(){
+	cfg := config.New()
+	defaultInit(cfg)
+}
+
 func InitMock(c config.AppConfig, t testing.TB){
 	config.App = c
 	log.InitMock(t)

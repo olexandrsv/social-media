@@ -8,6 +8,7 @@ import (
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 	"social-media/internal/users/endpoint"
+	"strconv"
 
 	"github.com/pkg/errors"
 
@@ -44,7 +45,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	r.Methods("GET").Path("/info/{login}").Handler(transport.NewServer(
+	r.Methods("GET").Path("/users/{id}").Handler(transport.NewServer(
 		endpoints.GetUser,
 		s.decodeGetUserReq,
 		s.encodeResponse,
@@ -143,13 +144,27 @@ func (s *server) decodeLoginReq(_ context.Context, r *http.Request) (interface{}
 }
 
 func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+
 	params := mux.Vars(r)
-	login, ok := params["login"]
+	routeParam, ok := params["id"]
 	if !ok {
 		return nil, common.ErrNoLogin
 	}
+
+	id, err := strconv.Atoi(routeParam)
+	if err != nil{
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
 	return endpoint.GetUserReq{
-		Login: login,
+		ID: id,
+		Token: token.Value,
 	}, nil
 }
 

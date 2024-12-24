@@ -83,13 +83,7 @@ func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (inter
 		return nil, common.ErrInternal
 	}
 
-	v := common.NewValidator()
-	v.NotEmpty("login", req.Login)
-	if err := v.Err(); err != nil {
-		return nil, err
-	}
-
-	user, err := e.service.GetUser(req.Login)
+	user, err := e.service.GetUser(req.Token, req.ID)
 	if err != nil {
 		return nil, err
 	}

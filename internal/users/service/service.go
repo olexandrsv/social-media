@@ -10,7 +10,7 @@ import (
 type Service interface {
 	CreateUser(string, string, string, string) (string, int, error)
 	Login(string, string) (string, int, error)
-	GetUser(string) (*user.User, error)
+	GetUser(string, int) (*user.User, error)
 	UpdateUser(string, string, string, string, string) error
 	GetUsersByInfo(string) ([]*user.User, error)
 	FollowUser(string, string) error
@@ -79,8 +79,12 @@ func (s *userService) Login(login, password string) (string, int, error) {
 	return token, user.ID(), nil
 }
 
-func (s *userService) GetUser(login string) (*user.User, error) {
-	return s.repo.GetUser(login)
+func (s *userService) GetUser(token string, id int) (*user.User, error) {
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.GetUser(id)
 }
 
 func (s *userService) UpdateUser(token, name, surname, bio, interests string) error {

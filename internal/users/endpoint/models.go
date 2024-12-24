@@ -18,13 +18,14 @@ type LoginReq struct {
 }
 
 type GetUserReq struct {
-	Login string `json:"login"`
+	ID    int
+	Token string
 }
 
 type GetUserResp struct {
 	Login     string `json:"login"`
-	Name      string `json:"first_name"`
-	Surname   string `json:"second_name"`
+	Name      string `json:"name"`
+	Surname   string `json:"surname"`
 	Bio       string `json:"bio"`
 	Interests string `json:"interests"`
 }

@@ -16,7 +16,7 @@ import (
 type Repository interface {
 	CreateUser(UserModel) (*user.User, error)
 	GetCredentials(string) (int, string, error)
-	GetUser(string) (*user.User, error)
+	GetUser(int) (*user.User, error)
 	UpdateUser(*user.User) error
 	UserExists(string) (bool, error)
 	GetUsersByInfo(string) ([]*user.User, error)
@@ -74,10 +74,12 @@ func (r *repo) GetCredentials(login string) (int, string, error) {
 	return id, encodedPassw, nil
 }
 
-func (r *repo) GetUser(login string) (*user.User, error) {
-	query := `select id, login, first_name, second_name, bio, interests from users where login=$1`
-	userModel := UserModel{}
-	err := r.db.QueryRow(query, login).Scan(&userModel.ID, &userModel.Login, &userModel.Name,
+func (r *repo) GetUser(id int) (*user.User, error) {
+	query := `select login, first_name, second_name, bio, interests from users where id=$1`
+	userModel := UserModel{
+		ID: id,
+	}
+	err := r.db.QueryRow(query, id).Scan(&userModel.Login, &userModel.Name,
 		&userModel.Surname, &userModel.Bio, &userModel.Interests)
 	if err == sql.ErrNoRows {
 		return nil, common.ErrNotFound
