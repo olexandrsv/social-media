@@ -32,24 +32,24 @@ func NewAuthClient() AuthClient {
 
 func (c client) GenerateToken(id int, login string) (string, error) {
 	resp, err := c.GenerateJWT(context.Background(), &auth.GenerateJWTReq{Id: int64(id), Login: login})
-	if err, ok := err.(Error); ok {
-		return "", err
-	}
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return "", ErrInternal
+	}
+	if resp.Err != nil {
+		return "", NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 	return resp.Token, nil
 }
 
 func (c client) ValidateToken(token string) (int, string, error) {
 	resp, err := c.ValidateJWT(context.Background(), &auth.ValidateJWTReq{Token: token})
-	if err, ok := err.(Error); ok {
-		return 0, "", err
-	}
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return 0, "", ErrInternal
+	}
+	if resp.Err != nil {
+		return 0, "", NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 	return int(resp.Id), resp.Login, nil
 }

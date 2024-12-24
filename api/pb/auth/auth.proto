@@ -14,6 +14,7 @@ message GenerateJWTReq{
 
 message GenerateJWTResp{
     string token = 1;
+    Error err = 2;
 }
 
 message ValidateJWTReq{
@@ -23,4 +24,10 @@ message ValidateJWTReq{
 message ValidateJWTResp{
     int64 id = 1;
     string login = 2;
+    Error err = 3;
+}
+
+message Error{
+    int64 code = 1;
+    string message = 2;
 }
