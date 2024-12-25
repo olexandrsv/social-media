@@ -51,7 +51,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	r.Methods("POST").Path("/info").Handler(transport.NewServer(
+	r.Methods("PUT").Path("/users").Handler(transport.NewServer(
 		endpoints.UpdateUser,
 		s.decodeUpdateUserReq,
 		s.encodeResponse,
@@ -150,7 +150,7 @@ func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface
 	params := mux.Vars(r)
 	routeParam, ok := params["id"]
 	if !ok {
-		return nil, common.ErrNoLogin
+		return nil, common.ErrInvalidData
 	}
 
 	id, err := strconv.Atoi(routeParam)

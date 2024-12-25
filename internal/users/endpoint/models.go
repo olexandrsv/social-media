@@ -31,11 +31,11 @@ type GetUserResp struct {
 }
 
 type UpdateUserReq struct {
-	Token     string `json:"token"`
-	Name      string `json:"first_name"`
-	Surname   string `json:"second_name"`
-	Bio       string `json:"bio"`
-	Interests string `json:"interests"`
+	Token     string
+	Name      string
+	Surname   string
+	Bio       string
+	Interests string
 }
 
 type UpdateUserResp struct {
@@ -62,6 +62,6 @@ type TokenReq struct {
 type UsersResp []UserModel
 
 type UserModel struct {
-	ID    int
-	Login string
+	ID    int    `json:"id"`
+	Login string `json:"login"`
 }

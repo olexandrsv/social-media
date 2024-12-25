@@ -426,7 +426,7 @@ func TestGetUsersByInfo(t *testing.T) {
 func TestFollowUser(t *testing.T) {
 	app.InitMock(config.AppConfig{}, t)
 	followBobReq := endpoint.FollowUserReq{Token: "ben", Login: "bob"}
-	
+
 	data := []struct {
 		e             mockEndpoints
 		req           endpoint.FollowUserReq
@@ -532,7 +532,7 @@ func TestGetFollowedLogins(t *testing.T) {
 		},
 		{
 			excludeCookie: true,
-			err: common.ErrNoToken,
+			err:           common.ErrNoToken,
 		},
 	}
 
