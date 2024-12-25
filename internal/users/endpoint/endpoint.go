@@ -110,7 +110,7 @@ func (e usersEndpoints) UpdateUser(ctx context.Context, request interface{}) (in
 }
 
 func (e usersEndpoints) GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error) {
-	req, ok := request.(GetLoginsByInfoReq)
+	req, ok := request.(GetUsersByInfoReq)
 	if !ok {
 		log.Error(errors.New("can't assign to GetLoginsByInfoReq"))
 		return nil, common.ErrInternal

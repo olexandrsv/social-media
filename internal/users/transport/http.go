@@ -58,9 +58,9 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	r.Methods("POST").Path("/filter").Handler(transport.NewServer(
+	r.Methods("GET").Path("/users").Queries("info", "{info}").Handler(transport.NewServer(
 		endpoints.GetUsersByInfo,
-		s.decodeGetLoginsByInfoReq,
+		s.decodeGetUsersByInfoReq,
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
@@ -185,13 +185,11 @@ func (s *server) decodeUpdateUserReq(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
-func (s *server) decodeGetLoginsByInfoReq(_ context.Context, r *http.Request) (interface{}, error) {
-	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-	return endpoint.GetLoginsByInfoReq{
-		Info: r.FormValue("info"),
+func (s *server) decodeGetUsersByInfoReq(_ context.Context, r *http.Request) (interface{}, error) {
+	info := r.URL.Query().Get("info")
+
+	return endpoint.GetUsersByInfoReq{
+		Info: info,
 	}, nil
 }
 

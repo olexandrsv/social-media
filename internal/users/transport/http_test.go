@@ -19,7 +19,7 @@ type mockEndpoints struct {
 	login             func(context.Context, interface{}) (interface{}, error)
 	getUser           func(context.Context, interface{}) (interface{}, error)
 	updateUser        func(context.Context, interface{}) (interface{}, error)
-	getUsersByInfo   func(context.Context, interface{}) (interface{}, error)
+	getUsersByInfo    func(context.Context, interface{}) (interface{}, error)
 	followUser        func(context.Context, interface{}) (interface{}, error)
 	getFollowedLogins func(context.Context, interface{}) (interface{}, error)
 }
@@ -354,13 +354,13 @@ func TestUpdateUser(t *testing.T) {
 
 func TestGetUsersByInfo(t *testing.T) {
 	app.InitMock(config.AppConfig{}, t)
-	getBobsReq := endpoint.GetLoginsByInfoReq{Info: "Bob"}
+	getBobsReq := endpoint.GetUsersByInfoReq{Info: "Bob"}
 	getBobsResp := endpoint.LoginsResp{Logins: []string{"bob01", "bob02"}}
 	getBobsErr := common.ErrInternal
 
 	data := []struct {
 		e           mockEndpoints
-		req         endpoint.GetLoginsByInfoReq
+		req         endpoint.GetUsersByInfoReq
 		resp        endpoint.LoginsResp
 		err         error
 		excludeForm bool
@@ -368,7 +368,7 @@ func TestGetUsersByInfo(t *testing.T) {
 		{
 			e: mockEndpoints{
 				getUsersByInfo: func(ctx context.Context, request interface{}) (interface{}, error) {
-					req, ok := request.(endpoint.GetLoginsByInfoReq)
+					req, ok := request.(endpoint.GetUsersByInfoReq)
 					if !ok {
 						t.Errorf("can't cast %+v to endpoint.GetLoginsByInfoReq", req)
 					}

@@ -42,7 +42,7 @@ type UpdateUserResp struct {
 	Error string `json:"error"`
 }
 
-type GetLoginsByInfoReq struct {
+type GetUsersByInfoReq struct {
 	Info string
 }
 
@@ -52,7 +52,7 @@ type LoginsResp struct {
 
 type FollowUserReq struct {
 	Token string
-	Login string
+	ID    int
 }
 
 type TokenReq struct {
