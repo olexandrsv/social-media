@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	transport "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -28,8 +29,6 @@ func newServer(e endpoint.Endpoints, r *mux.Router) *server {
 func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	r := mux.NewRouter()
 	s := newServer(endpoints, r)
-
-	r.Use(middleware)
 
 	r.Methods("POST").Path("/users").Queries().Handler(transport.NewServer(
 		endpoints.CreateUser,
@@ -84,19 +83,17 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 }
 
 func (s *server) Run() {
-	err := http.ListenAndServe(":"+config.App.UsersService.Port, s.router)
+	handler := handlers.CORS(
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
+		handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:4200"}),
+		handlers.AllowCredentials(),
+	)(s.router)
+	
+	err := http.ListenAndServe(":"+config.App.UsersService.Port, handler)
 	if err != nil {
 		log.Error(err)
 	}
-}
-
-func middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
-		w.Header().Add("Access-Control-Allow-Credentials", "true")
-		next.ServeHTTP(w, r)
-	})
 }
 
 func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
@@ -157,13 +154,13 @@ func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface
 	}
 
 	id, err := strconv.Atoi(routeParam)
-	if err != nil{
+	if err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidData
 	}
 
 	return endpoint.GetUserReq{
-		ID: id,
+		ID:    id,
 		Token: token.Value,
 	}, nil
 }
@@ -181,8 +178,8 @@ func (s *server) decodeUpdateUserReq(_ context.Context, r *http.Request) (interf
 
 	return endpoint.UpdateUserReq{
 		Token:     token.Value,
-		Name:      r.FormValue("first_name"),
-		Surname:   r.FormValue("second_name"),
+		Name:      r.FormValue("name"),
+		Surname:   r.FormValue("surname"),
 		Bio:       r.FormValue("bio"),
 		Interests: r.FormValue("interests"),
 	}, nil
