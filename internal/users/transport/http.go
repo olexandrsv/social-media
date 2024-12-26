@@ -65,7 +65,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
-	r.Methods("POST").Path("/follow/{login}").Handler(transport.NewServer(
+	r.Methods("POST").Path("/users/{id}/followers").Handler(transport.NewServer(
 		endpoints.FollowUser,
 		s.decodeFollowUserReq,
 		s.encodeResponse,
@@ -89,7 +89,7 @@ func (s *server) Run() {
 		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:4200"}),
 		handlers.AllowCredentials(),
 	)(s.router)
-	
+
 	err := http.ListenAndServe(":"+config.App.UsersService.Port, handler)
 	if err != nil {
 		log.Error(err)
@@ -200,13 +200,20 @@ func (s *server) decodeFollowUserReq(_ context.Context, r *http.Request) (interf
 		return nil, common.ErrNoToken
 	}
 	params := mux.Vars(r)
-	login, ok := params["login"]
+	routeParam, ok := params["id"]
 	if !ok {
-		return nil, common.ErrNoLogin
+		return nil, common.ErrInvalidData
 	}
+
+	id, err := strconv.Atoi(routeParam)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
 	return endpoint.FollowUserReq{
 		Token: token.Value,
-		Login: login,
+		ID: id,
 	}, nil
 }
 

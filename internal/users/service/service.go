@@ -13,7 +13,7 @@ type Service interface {
 	GetUser(string, int) (*user.User, error)
 	UpdateUser(string, string, string, string, string) error
 	GetUsersByInfo(string) ([]*user.User, error)
-	FollowUser(string, string) error
+	FollowUser(string, int) error
 	GetFollowedLogins(string) ([]string, error)
 }
 
@@ -107,12 +107,23 @@ func (s *userService) GetUsersByInfo(info string) ([]*user.User, error) {
 	return s.repo.GetUsersByInfo(info)
 }
 
-func (s *userService) FollowUser(token, followedLogin string) error {
+func (s *userService) FollowUser(token string, followedID int) error {
 	id, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return err
 	}
-	return s.repo.Subscribe(id, followedLogin)
+	if id == followedID {
+		return common.ErrInvalidData
+	}
+
+	exists, err := s.repo.SubscriptionExists(id, followedID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return common.ErrSubscriptionExists
+	}
+	return s.repo.Subscribe(id, followedID)
 }
 
 func (s *userService) GetFollowedLogins(token string) ([]string, error) {

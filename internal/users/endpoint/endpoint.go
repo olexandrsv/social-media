@@ -88,6 +88,7 @@ func (e usersEndpoints) GetUser(ctx context.Context, request interface{}) (inter
 		return nil, err
 	}
 	return &GetUserResp{
+		ID:        user.ID(),
 		Login:     user.Login(),
 		Name:      user.Name(),
 		Surname:   user.Surname(),
@@ -135,7 +136,7 @@ func (e usersEndpoints) FollowUser(ctx context.Context, request interface{}) (in
 		log.Error(errors.New("can't assign to FollowUserReq"))
 		return nil, common.ErrInternal
 	}
-	err := e.service.FollowUser(req.Token, req.Login)
+	err := e.service.FollowUser(req.Token, req.ID)
 	return nil, err
 }
 

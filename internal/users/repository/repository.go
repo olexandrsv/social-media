@@ -20,7 +20,8 @@ type Repository interface {
 	UpdateUser(*user.User) error
 	UserExists(string) (bool, error)
 	GetUsersByInfo(string) ([]*user.User, error)
-	Subscribe(int, string) error
+	SubscriptionExists(int, int) (bool, error)
+	Subscribe(int, int) error
 	GetFollowedLogins(int) ([]string, error)
 }
 
@@ -143,9 +144,25 @@ func (r *repo) GetUsersByInfo(info string) ([]*user.User, error) {
 	return users, nil
 }
 
-func (r *repo) Subscribe(userID int, followedLogin string) error {
-	query := `insert into followers (user_id, follower_id) values ((select id from users where login=$1), $2)`
-	_, err := r.db.Exec(query, followedLogin, userID)
+func (r *repo) SubscriptionExists(userID, followedID int) (bool, error){
+	query := `select count(user_id) from followers where user_id=$1 and follower_id=$2`
+	row := r.db.QueryRow(query, followedID, userID)
+
+	var count int
+	if err := row.Scan(&count); err != nil{
+		log.Error(errors.WithStack(err))
+		return false, common.ErrInternal
+	}
+
+	if count == 0{
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *repo) Subscribe(userID, followedID int) error {
+	query := `insert into followers (read, user_id, follower_id) values ($1, $2, $3)`
+	_, err := r.db.Exec(query, 0, followedID, userID)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal
