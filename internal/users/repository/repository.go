@@ -22,7 +22,7 @@ type Repository interface {
 	GetUsersByInfo(string) ([]*user.User, error)
 	SubscriptionExists(int, int) (bool, error)
 	Subscribe(int, int) error
-	GetFollowedLogins(int) ([]string, error)
+	GetFollowedUsers(int) ([]*user.User, error)
 }
 
 type repo struct {
@@ -170,8 +170,8 @@ func (r *repo) Subscribe(userID, followedID int) error {
 	return nil
 }
 
-func (r *repo) GetFollowedLogins(id int) ([]string, error) {
-	query := `select login from users join followers on users.id = followers.user_id and followers.follower_id=$1`
+func (r *repo) GetFollowedUsers(id int) ([]*user.User, error) {
+	query := `select id, login from users join followers on users.id = followers.user_id and followers.follower_id=$1`
 	rows, err := r.db.Query(query, id)
 	if err == sql.ErrNoRows {
 		return nil, common.ErrNotFound
@@ -181,15 +181,16 @@ func (r *repo) GetFollowedLogins(id int) ([]string, error) {
 		return nil, common.ErrInternal
 	}
 
-	var logins []string
+	var users []*user.User
 	for rows.Next() {
+		var id int
 		var login string
-		err = rows.Scan(&login)
+		err = rows.Scan(&id, &login)
 		if err != nil {
 			log.Error(errors.WithStack(err))
 			return nil, common.ErrInternal
 		}
-		logins = append(logins, login)
+		users = append(users, user.New(id, login))
 	}
-	return logins, nil
+	return users, nil
 }

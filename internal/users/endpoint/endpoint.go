@@ -15,7 +15,7 @@ type Endpoints interface {
 	UpdateUser(ctx context.Context, request interface{}) (interface{}, error)
 	GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error)
 	FollowUser(ctx context.Context, request interface{}) (interface{}, error)
-	GetFollowedLogins(ctx context.Context, request interface{}) (interface{}, error)
+	GetFollowedUsers(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 type usersEndpoints struct {
@@ -140,15 +140,22 @@ func (e usersEndpoints) FollowUser(ctx context.Context, request interface{}) (in
 	return nil, err
 }
 
-func (e usersEndpoints) GetFollowedLogins(ctx context.Context, request interface{}) (interface{}, error) {
+func (e usersEndpoints) GetFollowedUsers(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(TokenReq)
 	if !ok {
 		log.Error(errors.New("can't assign to TokenReq"))
 		return nil, common.ErrInternal
 	}
-	logins, err := e.service.GetFollowedLogins(req.Token)
+	users, err := e.service.GetFollowedUsers(req.Token)
 	if err != nil {
 		return nil, err
 	}
-	return LoginsResp{logins}, nil
+	userModels := make([]UserModel, 0, len(users))
+	for _, user := range users {
+		userModels = append(userModels, UserModel{
+			ID:    user.ID(),
+			Login: user.Login(),
+		})
+	}
+	return userModels, nil
 }

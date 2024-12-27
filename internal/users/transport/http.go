@@ -44,6 +44,13 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
+	r.Methods("GET").Path("/users/followed").Handler(transport.NewServer(
+		endpoints.GetFollowedUsers,
+		s.decodeGetFollowedUsersReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
+
 	r.Methods("GET").Path("/users/{id}").Handler(transport.NewServer(
 		endpoints.GetUser,
 		s.decodeGetUserReq,
@@ -68,13 +75,6 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	r.Methods("POST").Path("/users/{id}/followers").Handler(transport.NewServer(
 		endpoints.FollowUser,
 		s.decodeFollowUserReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
-
-	r.Methods("GET").Path("/follow").Handler(transport.NewServer(
-		endpoints.GetFollowedLogins,
-		s.decodeGetFollowedLoginsReq,
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
@@ -217,7 +217,7 @@ func (s *server) decodeFollowUserReq(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
-func (s *server) decodeGetFollowedLoginsReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *server) decodeGetFollowedUsersReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))

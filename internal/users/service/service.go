@@ -14,7 +14,7 @@ type Service interface {
 	UpdateUser(string, string, string, string, string) error
 	GetUsersByInfo(string) ([]*user.User, error)
 	FollowUser(string, int) error
-	GetFollowedLogins(string) ([]string, error)
+	GetFollowedUsers(string) ([]*user.User, error)
 }
 
 type userService struct {
@@ -126,10 +126,10 @@ func (s *userService) FollowUser(token string, followedID int) error {
 	return s.repo.Subscribe(id, followedID)
 }
 
-func (s *userService) GetFollowedLogins(token string) ([]string, error) {
+func (s *userService) GetFollowedUsers(token string) ([]*user.User, error) {
 	id, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetFollowedLogins(id)
+	return s.repo.GetFollowedUsers(id)
 }
