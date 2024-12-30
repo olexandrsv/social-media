@@ -7,13 +7,18 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 	"social-media/internal/posts/endpoint"
+	"strconv"
 
 	transport "github.com/go-kit/kit/transport/http"
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -35,15 +40,15 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 
 	r.Use(middleware)
 
-	r.Methods("POST").Path("/post").Handler(transport.NewServer(
+	r.Methods("POST").Path("/users/posts").Handler(transport.NewServer(
 		e.CreatePost,
 		s.decodeCreatePostReq,
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
-	r.Methods("GET").Path("/post").Handler(transport.NewServer(
-		e.OwnPosts,
-		s.decodeTokenReq,
+	r.Methods("GET").Path("/users/{id}/posts").Handler(transport.NewServer(
+		e.GetPosts,
+		s.decodeGetPostsReq,
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
@@ -89,16 +94,14 @@ func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (inte
 		return nil, common.ErrInvalidData
 	}
 
-	filesPath, err := processFileForm(r.MultipartForm, "[]files")
+	filesPath, err := processFormFiles(r.MultipartForm, "files[]")
 	if err != nil {
-		log.Error(err)
-		return nil, common.ErrInvalidData
+		return nil, err
 	}
 
-	imagesPath, err := processFileForm(r.MultipartForm, "[]images")
+	imagesPath, err := processFormFiles(r.MultipartForm, "images[]")
 	if err != nil {
-		log.Error(err)
-		return nil, common.ErrInvalidData
+		return nil, err
 	}
 
 	return endpoint.CreatePostReq{
@@ -137,7 +140,30 @@ func saveFile(h *multipart.FileHeader) error {
 	return nil
 }
 
-func (s *server) decodeTokenReq(ctx context.Context, r *http.Request) (interface{}, error) {
+func (s *server) decodeGetPostsReq(_ context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(err)
+		return nil, common.ErrNoToken
+	}
+
+	params := mux.Vars(r)
+	routeParam, ok := params["id"]
+	if !ok {
+		return nil, common.ErrInvalidData
+	}
+	id, err := strconv.Atoi(routeParam)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+	return endpoint.GetPostsRequest{
+		Token:  token.Value,
+		UserID: id,
+	}, nil
+}
+
+func (s *server) decodeTokenReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(err)

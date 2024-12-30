@@ -30,7 +30,7 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	r := mux.NewRouter()
 	s := newServer(endpoints, r)
 
-	r.Methods("POST").Path("/users").Queries().Handler(transport.NewServer(
+	r.Methods("POST").Path("/users").Handler(transport.NewServer(
 		endpoints.CreateUser,
 		s.decodeCreateUserReq,
 		s.encodeResponse,
