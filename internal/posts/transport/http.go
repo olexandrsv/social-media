@@ -112,30 +112,49 @@ func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (inte
 	}, nil
 }
 
-func processFileForm(form *multipart.Form, key string) ([]string, error) {
-	filesHeaders := form.File[key]
-	filesPaths := make([]string, 0, len(filesHeaders))
-	for _, h := range filesHeaders {
-		filesPaths = append(filesPaths, h.Filename)
-		if err := saveFile(h); err != nil {
+func processFormFiles(form *multipart.Form, key string) ([]string, error) {
+	filesNames := []string{}
+	files := form.File[key]
+	for _, file := range files {
+		filename, err := processFormFile(file)
+		if err != nil {
 			return nil, err
 		}
+		filesNames = append(filesNames, filename)
 	}
-	return filesPaths, nil
+	return filesNames, nil
 }
 
-func saveFile(h *multipart.FileHeader) error {
-	src, err := h.Open()
+func processFormFile(file *multipart.FileHeader) (string, error) {
+	extension := filepath.Ext(file.Filename)
+	id, err := uuid.NewUUID()
 	if err != nil {
-		return err
+		log.Error(errors.WithStack(err))
+		return "", common.ErrInternal
 	}
-	dst, err := os.OpenFile("./../../upload/"+h.Filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
-	if err != nil {
-		return err
+	filename := id.String() + extension
+	path := "./upload/" + filename
+	if err := saveFile(file, path); err != nil {
+		return "", err
 	}
+	return filename, nil
+}
 
-	if _, err := io.Copy(dst, src); err != nil {
-		return err
+func saveFile(fileHeader *multipart.FileHeader, path string) error {
+	file, err := fileHeader.Open()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+	newFile, err := os.Create(path)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	_, err = io.Copy(newFile, file)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
 	}
 	return nil
 }
