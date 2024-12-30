@@ -38,8 +38,6 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 	r := mux.NewRouter()
 	s := newServer(e, r)
 
-	r.Use(middleware)
-
 	r.Methods("POST").Path("/users/posts").Handler(transport.NewServer(
 		e.CreatePost,
 		s.decodeCreatePostReq,
@@ -56,20 +54,18 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 }
 
 func (s *server) Run() {
-	err := http.ListenAndServe(":"+config.App.PostsService.Port, s.router)
+	handler := handlers.CORS(
+		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
+		handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:4200"}),
+		handlers.AllowCredentials(),
+	)(s.router)
+
+	err := http.ListenAndServe(":"+config.App.PostsService.Port, handler)
 	if err != nil {
 		log.Error(err)
 		panic(err)
 	}
-}
-
-func middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:4200")
-		w.Header().Add("Access-Control-Allow-Credentials", "true")
-		next.ServeHTTP(w, r)
-	})
 }
 
 func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
