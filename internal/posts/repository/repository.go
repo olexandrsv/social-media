@@ -9,6 +9,7 @@ import (
 	"social-media/internal/posts/domain/post"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,6 +19,8 @@ import (
 type Repository interface {
 	CreatePost(PostModel) (*post.Post, error)
 	UserPosts(int) ([]*post.Post, error)
+	UpdatePost(*post.Post) error
+	GetPost(string) (*post.Post, error)
 }
 
 type repo struct {
@@ -33,7 +36,6 @@ func New() Repository {
 	databaseName := config.App.MongoDB.Name
 
 	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s", user, password, host, port, databaseName)
-	fmt.Println("url: ", url)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
 		panic(err)
@@ -90,4 +92,49 @@ func (r *repo) UserPosts(userID int) ([]*post.Post, error){
 		posts = append(posts, post)
 	}
 	return posts, nil
+}
+
+func (r *repo) UpdatePost(post *post.Post) error{
+	coll := r.DB.Collection("posts")
+	id, err := primitive.ObjectIDFromHex(post.ID())
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	update := bson.D{
+		{Key: "$set", Value: UpdatePostModel{
+			Text: post.Text(),
+			ImagesPath: post.ImagesPaths(),
+			FilesPath: post.FilesPaths(),
+		}},
+	}
+	_, err = coll.UpdateByID(context.Background(), id, update)
+	if err != nil{
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	return nil
+}
+
+func (r *repo) GetPost(id string) (*post.Post, error){
+	coll := r.DB.Collection("posts")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil{
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	filter := bson.M{
+		"_id": objectID,
+	}
+	res := coll.FindOne(context.Background(), filter)
+	var model PostModel
+	if err := res.Decode(&model); err != nil{
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+
+	return post.New(model.ID, model.UserID, post.WithText(model.Text), post.WithImagesPaths(model.ImagesPath),
+		post.WithFilesPaths(model.FilesPath), post.WithCommentsIDs(model.CommentsIDs)), nil
 }

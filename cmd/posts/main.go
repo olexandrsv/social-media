@@ -15,8 +15,6 @@ func main() {
 	repo := repository.New()
 	auth := common.NewAuthClient()
 
-	repo.UserPosts(16)
-
 	s := service.New(repo, auth)
 	e := endpoint.New(s)
 

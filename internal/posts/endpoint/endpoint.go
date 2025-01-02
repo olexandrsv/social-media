@@ -11,6 +11,7 @@ import (
 type Endpoint interface {
 	CreatePost(ctx context.Context, request interface{}) (interface{}, error)
 	GetPosts(ctx context.Context, request interface{}) (interface{}, error)
+	UpdatePost(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 type postsEndpoint struct {
@@ -34,7 +35,7 @@ func (e *postsEndpoint) CreatePost(ctx context.Context, request interface{}) (in
 	if err != nil {
 		return nil, err
 	}
-	return Post{
+	return PostModel{
 		ID:          post.ID(),
 		Text:        post.Text(),
 		FilesPaths:  post.FilesPaths(),
@@ -54,9 +55,9 @@ func (e *postsEndpoint) GetPosts(ctx context.Context, request interface{}) (inte
 		return nil, err
 	}
 
-	postModels := make([]Post, 0, len(posts))
+	postModels := make([]PostModel, 0, len(posts))
 	for _, post := range posts {
-		postModels = append(postModels, Post{
+		postModels = append(postModels, PostModel{
 			ID:          post.ID(),
 			UserID:      post.UserID(),
 			Text:        post.Text(),
@@ -65,4 +66,33 @@ func (e *postsEndpoint) GetPosts(ctx context.Context, request interface{}) (inte
 		})
 	}
 	return postModels, nil
+}
+
+func (e *postsEndpoint) UpdatePost(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(UpdatePostReq)
+	if !ok {
+		log.Error(errors.New("can't assign to UpdatePostReq"))
+		return nil, common.ErrInternal
+	}
+
+	post, err := e.s.UpdatePost(service.UpdatePostReq{
+		Token:         req.Token,
+		ID:            req.ID,
+		Text:          req.Text,
+		Images:        req.Images,
+		Files:         req.Files,
+		DeletedImages: req.DeletedImages,
+		DeletedFiles:  req.DeletedFiles,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return PostModel{
+		ID:          post.ID(),
+		UserID:      post.UserID(),
+		Text:        post.Text(),
+		FilesPaths:  post.FilesPaths(),
+		ImagesPaths: post.ImagesPaths(),
+	}, nil
 }

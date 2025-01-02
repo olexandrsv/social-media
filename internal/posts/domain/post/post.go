@@ -8,6 +8,7 @@ type Post struct {
 	text        string
 	imagesPaths []string
 	filesPaths  []string
+	commentsIDs []string
 }
 
 func New(id string, userID int, opts ...Option) *Post {
@@ -33,6 +34,10 @@ func WithFilesPaths(filesPaths []string) Option {
 	return func(p *Post) { p.filesPaths = filesPaths }
 }
 
+func WithCommentsIDs(commentsIDs []string) Option{
+	return func(p *Post) { p.commentsIDs = commentsIDs }
+}
+
 func (p *Post) ID() string {
 	return p.id
 }
@@ -51,4 +56,8 @@ func (p *Post) ImagesPaths() []string {
 
 func (p *Post) FilesPaths() []string {
 	return p.filesPaths
+}
+
+func (p *Post) CommentsIDs() []string{
+	return p.commentsIDs
 }

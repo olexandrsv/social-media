@@ -38,6 +38,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 	r := mux.NewRouter()
 	s := newServer(e, r)
 
+	r.Methods("PUT").Path("/users/posts/{id}").Handler(transport.NewServer(
+		e.UpdatePost,
+		s.decodeUpdatePostReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 	r.Methods("POST").Path("/users/posts").Handler(transport.NewServer(
 		e.CreatePost,
 		s.decodeCreatePostReq,
@@ -50,6 +56,7 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	
 	return s
 }
 
@@ -181,11 +188,40 @@ func (s *server) decodeGetPostsReq(_ context.Context, r *http.Request) (interfac
 func (s *server) decodeTokenReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrNoToken
 	}
 	return endpoint.Token{
 		Token: token.Value,
+	}, nil
+}
+
+func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+	params := mux.Vars(r)
+	id, ok := params["id"]
+	if !ok {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	if err := r.ParseMultipartForm(1 << 20); err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	return endpoint.UpdatePostReq{
+		Token:         token.Value,
+		ID:            id,
+		Text:          r.FormValue("text"),
+		Images:        r.MultipartForm.File["images[]"],
+		Files:         r.MultipartForm.File["files[]"],
+		DeletedImages: r.MultipartForm.Value["deletedImages[]"],
+		DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
 	}, nil
 }
 
