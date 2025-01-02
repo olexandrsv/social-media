@@ -95,11 +95,11 @@ func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWrit
 func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrNoToken
 	}
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidData
 	}
 

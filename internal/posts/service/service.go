@@ -6,6 +6,8 @@ import (
 	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/post"
 	"social-media/internal/posts/repository"
+
+	"github.com/pkg/errors"
 )
 
 type Service interface {
@@ -30,7 +32,7 @@ func New(r repository.Repository, auth common.AuthClient) Service {
 func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []string) (*post.Post, error) {
 	id, _, err := s.auth.ValidateToken(token)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidToken
 	}
 	post, err := s.repo.CreatePost(repository.PostModel{

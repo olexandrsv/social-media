@@ -39,6 +39,7 @@ func New() Repository {
 	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s", user, password, host, port, databaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
+		log.Error(errors.WithStack(err))
 		panic(err)
 	}
 
@@ -47,6 +48,7 @@ func New() Repository {
 
 	err = client.Connect(ctx)
 	if err != nil {
+		log.Error(errors.WithStack(err))
 		panic(err)
 	}
 	db := client.Database(databaseName)
@@ -61,7 +63,7 @@ func (r *repo) CreatePost(postModel PostModel) (*post.Post, error) {
 	coll := r.DB.Collection("posts")
 	res, err := coll.InsertOne(context.Background(), postModel)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
 
@@ -77,12 +79,12 @@ func (r *repo) UserPosts(userID int) ([]*post.Post, error){
 	filter := bson.D{{Key: "userId", Value: userID}}
 	cursor, err := coll.Find(context.Background(), filter)
 	if err != nil{
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
 	var postModels []PostModel
 	if err := cursor.All(context.Background(), &postModels); err != nil{
-		log.Error(err)
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
 
