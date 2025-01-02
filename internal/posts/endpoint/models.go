@@ -35,3 +35,8 @@ type UpdatePostReq struct {
 	DeletedFiles  []string
 	DeletedImages []string
 }
+
+type DeletePostReq struct {
+	Token  string
+	PostID string
+}

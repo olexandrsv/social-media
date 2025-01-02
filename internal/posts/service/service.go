@@ -12,6 +12,7 @@ type Service interface {
 	CreatePost(token, text string, filesPaths, imagesPaths []string) (*post.Post, error)
 	GetPosts(string, int) ([]*post.Post, error)
 	UpdatePost(UpdatePostReq) (*post.Post, error)
+	DeletePost(string, string) error
 }
 
 type postsService struct {
@@ -98,4 +99,22 @@ func (s *postsService) UpdatePost(req UpdatePostReq) (*post.Post, error) {
 		return nil, err
 	}
 	return newPost, nil
+}
+
+func (s *postsService) DeletePost(token, id string) error {
+	userID, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+
+	post, err := s.repo.GetPost(id)
+	if err != nil {
+		return err
+	}
+
+	if post.UserID() != userID {
+		return common.ErrForbidden
+	}
+
+	return s.repo.DeletePost(id)
 }

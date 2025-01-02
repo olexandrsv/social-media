@@ -12,6 +12,7 @@ type Endpoint interface {
 	CreatePost(ctx context.Context, request interface{}) (interface{}, error)
 	GetPosts(ctx context.Context, request interface{}) (interface{}, error)
 	UpdatePost(ctx context.Context, request interface{}) (interface{}, error)
+	DeletePost(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 type postsEndpoint struct {
@@ -95,4 +96,18 @@ func (e *postsEndpoint) UpdatePost(ctx context.Context, request interface{}) (in
 		FilesPaths:  post.FilesPaths(),
 		ImagesPaths: post.ImagesPaths(),
 	}, nil
+}
+
+func (e *postsEndpoint) DeletePost(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(DeletePostReq)
+	if !ok {
+		log.Error(errors.New("can't assign to DeletePostReq"))
+		return nil, common.ErrInternal
+	}
+
+	err := e.s.DeletePost(req.Token, req.PostID)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

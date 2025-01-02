@@ -21,6 +21,7 @@ type Repository interface {
 	UserPosts(int) ([]*post.Post, error)
 	UpdatePost(*post.Post) error
 	GetPost(string) (*post.Post, error)
+	DeletePost(string) error
 }
 
 type repo struct {
@@ -128,13 +129,38 @@ func (r *repo) GetPost(id string) (*post.Post, error){
 	filter := bson.M{
 		"_id": objectID,
 	}
+	
 	res := coll.FindOne(context.Background(), filter)
 	var model PostModel
-	if err := res.Decode(&model); err != nil{
+	err = res.Decode(&model)
+	if err == mongo.ErrNoDocuments{
+		return nil, common.ErrNotFound
+	}
+	if err != nil{
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
-
+	
 	return post.New(model.ID, model.UserID, post.WithText(model.Text), post.WithImagesPaths(model.ImagesPath),
 		post.WithFilesPaths(model.FilesPath), post.WithCommentsIDs(model.CommentsIDs)), nil
+}
+
+func (r *repo) DeletePost(id string) error {
+	coll := r.DB.Collection("posts")
+	
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil{
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	filter := bson.M{
+		"_id": objectID,
+	}
+	_, err = coll.DeleteOne(context.Background(), filter)
+	if err != nil{
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	return nil
 }

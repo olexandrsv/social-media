@@ -56,6 +56,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	r.Methods("DELETE").Path("/users/posts/{id}").Handler(transport.NewServer(
+		e.DeletePost,
+		s.decodeDeletePostReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 	
 	return s
 }
@@ -222,6 +228,25 @@ func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interf
 		Files:         r.MultipartForm.File["files[]"],
 		DeletedImages: r.MultipartForm.Value["deletedImages[]"],
 		DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
+	}, nil
+}
+
+func (s *server) decodeDeletePostReq(_ context.Context, r *http.Request) (interface{}, error){
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+	params := mux.Vars(r)
+	id, ok := params["id"]
+	if !ok {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	return endpoint.DeletePostReq{
+		Token: token.Value,
+		PostID: id,
 	}, nil
 }
 

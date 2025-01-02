@@ -12,6 +12,7 @@ var (
 	ErrNotFound           = NewError(http.StatusNotFound, "No Data")
 	ErrLoginExists        = NewError(http.StatusOK, "Login exists")
 	ErrSubscriptionExists = NewError(http.StatusBadRequest, "Subscription exists")
+	ErrForbidden          = NewError(http.StatusForbidden, "Forbidden")
 
 	ErrInvalidToken = NewError(http.StatusUnauthorized, "Invalid Token")
 )
