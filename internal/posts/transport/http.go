@@ -62,7 +62,13 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
-	
+	r.Methods("GET").Path("/posts/{id}/comments").Handler(transport.NewServer(
+		e.PostComments,
+		s.decodePostCommentsReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
+
 	return s
 }
 
@@ -231,7 +237,7 @@ func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
-func (s *server) decodeDeletePostReq(_ context.Context, r *http.Request) (interface{}, error){
+func (s *server) decodeDeletePostReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -245,7 +251,26 @@ func (s *server) decodeDeletePostReq(_ context.Context, r *http.Request) (interf
 	}
 
 	return endpoint.DeletePostReq{
-		Token: token.Value,
+		Token:  token.Value,
+		PostID: id,
+	}, nil
+}
+
+func (s *server) decodePostCommentsReq(_ context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+	params := mux.Vars(r)
+	id, ok := params["id"]
+	if !ok {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	return endpoint.GetPostCommentsReq{
+		Token:  token.Value,
 		PostID: id,
 	}, nil
 }

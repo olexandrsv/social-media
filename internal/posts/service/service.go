@@ -4,6 +4,7 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/common/files"
+	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/domain/post"
 	"social-media/internal/posts/repository"
 
@@ -15,6 +16,7 @@ type Service interface {
 	GetPosts(string, int) ([]*post.Post, error)
 	UpdatePost(UpdatePostReq) (*post.Post, error)
 	DeletePost(string, string) error
+	PostComments(string, string) ([]*comment.Comment, error)
 }
 
 type postsService struct {
@@ -119,4 +121,13 @@ func (s *postsService) DeletePost(token, id string) error {
 	}
 
 	return s.repo.DeletePost(id)
+}
+
+func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error){
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.PostComments(id)
 }

@@ -1,3 +1,4 @@
 *.ini
 *.exe
 /upload/*
+*_test.go

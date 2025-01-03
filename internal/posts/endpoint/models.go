@@ -40,3 +40,16 @@ type DeletePostReq struct {
 	Token  string
 	PostID string
 }
+
+type GetPostCommentsReq struct {
+	Token  string
+	PostID string
+}
+
+type CommentModel struct {
+	ID          string   `json:"_id,omitempty"`
+	UserID      int      `json:"userId"`
+	Text        string   `json:"text"`
+	ImagesPath  []string `json:"images"`
+	FilesPath   []string `json:"files"`
+}

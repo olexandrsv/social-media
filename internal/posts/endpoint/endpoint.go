@@ -13,6 +13,7 @@ type Endpoint interface {
 	GetPosts(ctx context.Context, request interface{}) (interface{}, error)
 	UpdatePost(ctx context.Context, request interface{}) (interface{}, error)
 	DeletePost(ctx context.Context, request interface{}) (interface{}, error)
+	PostComments(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 type postsEndpoint struct {
@@ -110,4 +111,30 @@ func (e *postsEndpoint) DeletePost(ctx context.Context, request interface{}) (in
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (e *postsEndpoint) PostComments(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(GetPostCommentsReq)
+	if !ok {
+		log.Error(errors.New("can't assign to GetPostCommentsReq"))
+		return nil, common.ErrInternal
+	}
+
+	comments, err := e.s.PostComments(req.Token, req.PostID)
+	if err != nil {
+		return nil, err
+	}
+
+	commentsModels := make([]CommentModel, 0, len(comments))
+	for _, comment := range comments {
+		commentModel := CommentModel{
+			ID:         comment.ID(),
+			UserID:     comment.UserID(),
+			Text:       comment.Text(),
+			ImagesPath: comment.ImagesPaths(),
+			FilesPath:  comment.FilesPaths(),
+		}
+		commentsModels = append(commentsModels, commentModel)
+	}
+	return commentsModels, nil
 }
