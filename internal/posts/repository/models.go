@@ -1,5 +1,13 @@
 package repository
 
+type CreatePostReq struct {
+	ID          string
+	UserID      int
+	Text        string
+	ImagesPaths []string
+	FilesPaths  []string
+}
+
 type PostModel struct {
 	ID          string   `bson:"_id,omitempty"`
 	UserID      int      `bson:"userId"`

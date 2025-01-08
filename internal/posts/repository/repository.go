@@ -17,7 +17,7 @@ import (
 )
 
 type Repository interface {
-	CreatePost(PostModel) (*post.Post, error)
+	CreatePost(CreatePostReq) (*post.Post, error)
 	UserPosts(int) ([]*post.Post, error)
 	UpdatePost(*post.Post) error
 	GetPost(string) (*post.Post, error)
@@ -64,9 +64,16 @@ func New() Repository {
 	}
 }
 
-func (r *repo) CreatePost(postModel PostModel) (*post.Post, error) {
-	coll := r.DB.Collection("posts")
-	res, err := coll.InsertOne(context.Background(), postModel)
+func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
+	model := PostModel{
+		ID:         req.ID,
+		UserID:     req.UserID,
+		Text:       req.Text,
+		ImagesPath: req.ImagesPaths,
+		FilesPath:  req.FilesPaths,
+		CommentsIDs: []string{},
+	}
+	res, err := r.posts.InsertOne(context.Background(), model)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
@@ -74,9 +81,8 @@ func (r *repo) CreatePost(postModel PostModel) (*post.Post, error) {
 
 	id := res.InsertedID.(primitive.ObjectID).Hex()
 
-	post := post.New(id, postModel.UserID, post.WithText(postModel.Text),
-		post.WithFilesPaths(postModel.FilesPath), post.WithImagesPaths(postModel.ImagesPath))
-	return post, nil
+	return post.New(id, model.UserID, post.WithText(model.Text),
+		post.WithFilesPaths(model.FilesPath), post.WithImagesPaths(model.ImagesPath)), nil
 }
 
 func (r *repo) UserPosts(userID int) ([]*post.Post, error) {
@@ -212,7 +218,7 @@ func toObjectIDs(ids []string) ([]primitive.ObjectID, error) {
 
 func (r *repo) addPostChild(postID, commentID string) error {
 	objectID, err := primitive.ObjectIDFromHex(postID)
-	if err != nil{
+	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInvalidData
 	}
