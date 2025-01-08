@@ -8,11 +8,13 @@ import (
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type commentRepository interface {
 	PostComments(string) ([]*comment.Comment, error)
+	GetComment(string) (*comment.Comment, error)
 	CreatePostComment(CreateCommentReq) (*comment.Comment, error)
 }
 
@@ -61,6 +63,25 @@ func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
 	}
 
 	return comments, nil
+}
+
+func (r *repo) GetComment(id string) (*comment.Comment, error) {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+	filter := bson.M{
+		"_id": objectID,
+	}
+	res := r.comments.FindOne(context.Background(), filter)
+	var model CommentModel
+	if err := res.Decode(&model); err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+	return comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
+		comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs)), nil
 }
 
 func (r *repo) CreatePostComment(req CreateCommentReq) (*comment.Comment, error) {
