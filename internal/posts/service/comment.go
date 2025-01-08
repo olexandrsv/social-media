@@ -9,6 +9,7 @@ import (
 type commentsService interface {
 	PostComments(string, string) ([]*comment.Comment, error)
 	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
+	UpdateComment(UpdateCommentReq) (*comment.Comment, error)
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
@@ -38,5 +39,48 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 	}
 
 	return comment, nil
+}
+
+func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, error){
+	id, _, err := s.auth.ValidateToken(req.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := s.repo.GetComment(req.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	addedImages, err := files.Process(req.Images)
+	if err != nil {
+		return nil, err
+	}
+	addedFiles, err := files.Process(req.Files)
+	if err != nil {
+		return nil, err
+	}
+
+	remainedImages, err := files.Remained(c.ImagesPaths(), req.DeletedImages)
+	if err != nil {
+		return nil, err
+	}
+	remainedFiles, err := files.Remained(c.FilesPaths(), req.DeletedFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := files.Delete(req.DeletedImages); err != nil {
+		return nil, err
+	}
+	if err := files.Delete(req.DeletedFiles); err != nil {
+		return nil, err
+	}
+
+	imagesPaths := append(remainedImages, addedImages...)
+	filesPaths := append(remainedFiles, addedFiles...)
+
+	return comment.New(req.ID, id, comment.WithText(req.Text), comment.WithImagesPaths(imagesPaths),
+		comment.WithFilesPaths(filesPaths)), nil
 }
 

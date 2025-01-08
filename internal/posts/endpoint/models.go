@@ -61,3 +61,13 @@ type CreatePostCommentReq struct {
 	Images []*multipart.FileHeader
 	Files  []*multipart.FileHeader
 }
+
+type UpdateCommentReq struct {
+	Token         string
+	CommentID     string
+	Text          string
+	Images        []*multipart.FileHeader
+	Files         []*multipart.FileHeader
+	DeletedFiles  []string
+	DeletedImages []string
+}

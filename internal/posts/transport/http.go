@@ -75,6 +75,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	r.Methods("PUT").Path("/users/posts/comments/{id}").Handler(transport.NewServer(
+		e.UpdateComment,
+		s.decodeUpdateCommentReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 
 	return s
 }

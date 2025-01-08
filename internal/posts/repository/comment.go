@@ -16,6 +16,7 @@ type commentRepository interface {
 	PostComments(string) ([]*comment.Comment, error)
 	GetComment(string) (*comment.Comment, error)
 	CreatePostComment(CreateCommentReq) (*comment.Comment, error)
+	UpdateComment(*comment.Comment) error
 }
 
 func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
@@ -55,7 +56,7 @@ func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
 		return nil, common.ErrInternal
 	}
 
-	var comments []*comment.Comment
+	comments := make([]*comment.Comment, 0, len(commentModels))
 	for _, model := range commentModels {
 		c := comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
 			comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs))
@@ -114,4 +115,30 @@ func (r *repo) createComment(req CreateCommentReq) (string, error) {
 		return "", common.ErrInternal
 	}
 	return hexFromObjectID(res.InsertedID), nil
+}
+
+func (r *repo) UpdateComment(c *comment.Comment) error {
+	objectID, err := primitive.ObjectIDFromHex(c.ID())
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	filter := bson.M{
+		"_id": objectID,
+	}
+	update := bson.D{
+		{Key: "$set", Value: UpdateCommentModel{
+			Text:       c.Text(),
+			ImagesPath: c.ImagesPaths(),
+			FilesPath:  c.FilesPaths(),
+		}},
+	}
+
+	_, err = r.comments.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	return nil
 }
