@@ -66,3 +66,22 @@ func (s *server) decodeUpdateCommentReq(ctx context.Context, r *http.Request) (i
 		DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
 	}, nil
 }
+
+func (s *server) decodeCommentCommentsReq(ctx context.Context, r *http.Request) (interface{}, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+	params := mux.Vars(r)
+	id, ok := params["id"]
+	if !ok {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	return endpoint.GetCommentCommentsReq{
+		Token:     token.Value,
+		CommentID: id,
+	}, nil
+}

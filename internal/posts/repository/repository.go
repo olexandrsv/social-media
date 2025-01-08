@@ -194,7 +194,7 @@ func (r *repo) postCommentsIDs(postID string) ([]string, error) {
 
 	response := r.posts.FindOne(context.Background(), filter, option)
 
-	var result CommentModel
+	var result PostModel
 	if err := response.Decode(&result); err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal

@@ -11,6 +11,7 @@ import (
 type commentEndpoint interface {
 	CreatePostComment(ctx context.Context, request interface{}) (interface{}, error)
 	UpdateComment(ctx context.Context, request interface{}) (interface{}, error)
+	CommentComments(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 func (e *postsEndpoint) CreatePostComment(ctx context.Context, request interface{}) (interface{}, error) {
@@ -67,4 +68,19 @@ func (e *postsEndpoint) UpdateComment(ctx context.Context, request interface{}) 
 		ImagesPath: comment.ImagesPaths(),
 		FilesPath: comment.FilesPaths(),
 	}, nil
+}
+
+func (e *postsEndpoint) CommentComments(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(GetCommentCommentsReq)
+	if !ok {
+		log.Error(errors.New("can't assign to GetCommentCommentsReq"))
+		return nil, common.ErrInternal
+	}
+
+	comments, err := e.s.CommentComments(req.Token, req.CommentID)
+	if err != nil {
+		return nil, err
+	}
+
+	return commentsToModels(comments), nil
 }

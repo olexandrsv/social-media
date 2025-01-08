@@ -5,6 +5,7 @@ import (
 	"errors"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
+	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/service"
 )
 
@@ -126,6 +127,10 @@ func (e *postsEndpoint) PostComments(ctx context.Context, request interface{}) (
 		return nil, err
 	}
 
+	return commentsToModels(comments), nil
+}
+
+func commentsToModels(comments []*comment.Comment) []CommentModel {
 	commentsModels := make([]CommentModel, 0, len(comments))
 	for _, comment := range comments {
 		commentModel := CommentModel{
@@ -137,5 +142,5 @@ func (e *postsEndpoint) PostComments(ctx context.Context, request interface{}) (
 		}
 		commentsModels = append(commentsModels, commentModel)
 	}
-	return commentsModels, nil
+	return commentsModels
 }

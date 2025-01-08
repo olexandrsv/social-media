@@ -71,3 +71,8 @@ type UpdateCommentReq struct {
 	DeletedFiles  []string
 	DeletedImages []string
 }
+
+type GetCommentCommentsReq struct {
+	Token     string
+	CommentID string
+}

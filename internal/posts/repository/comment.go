@@ -17,6 +17,8 @@ type commentRepository interface {
 	GetComment(string) (*comment.Comment, error)
 	CreatePostComment(CreateCommentReq) (*comment.Comment, error)
 	UpdateComment(*comment.Comment) error
+
+	CommentComments(string) ([]*comment.Comment, error)
 }
 
 func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
@@ -33,6 +35,11 @@ func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
 }
 
 func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
+	comments := make([]*comment.Comment, 0, len(ids))
+	if len(ids) == 0 {
+		return comments, nil
+	}
+	
 	objectIDs, err := toObjectIDs(ids)
 	if err != nil {
 		return nil, err
@@ -56,7 +63,6 @@ func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
 		return nil, common.ErrInternal
 	}
 
-	comments := make([]*comment.Comment, 0, len(commentModels))
 	for _, model := range commentModels {
 		c := comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
 			comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs))
@@ -142,3 +148,42 @@ func (r *repo) UpdateComment(c *comment.Comment) error {
 	}
 	return nil
 }
+
+func (r *repo) CommentComments(commentID string) ([]*comment.Comment, error){
+	commentsIDs, err := r.commentCommentsIDs(commentID)
+	if err != nil {
+		return nil, err
+	}
+
+	comments, err := r.getCommentsByIDs(commentsIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return comments, nil
+}
+
+func (r *repo) commentCommentsIDs(commentID string) ([]string, error){
+	objectID, err := primitive.ObjectIDFromHex(commentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInvalidData
+	}
+
+	filter := bson.M{
+		"_id": objectID,
+	}
+	option := options.FindOne().SetProjection(bson.M{
+		"comments": 1,
+	})
+
+	response := r.comments.FindOne(context.Background(), filter, option)
+
+	var model CommentModel
+	if err := response.Decode(&model); err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+
+	return model.CommentsIDs, nil
+} 

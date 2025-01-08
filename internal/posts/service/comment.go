@@ -10,6 +10,8 @@ type commentsService interface {
 	PostComments(string, string) ([]*comment.Comment, error)
 	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
 	UpdateComment(UpdateCommentReq) (*comment.Comment, error)
+
+	CommentComments(string, string) ([]*comment.Comment, error)
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
@@ -84,3 +86,10 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 		comment.WithFilesPaths(filesPaths)), nil
 }
 
+func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comment, error){
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.CommentComments(commentID)
+}
