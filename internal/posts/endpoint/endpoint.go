@@ -14,6 +14,7 @@ type Endpoint interface {
 	UpdatePost(ctx context.Context, request interface{}) (interface{}, error)
 	DeletePost(ctx context.Context, request interface{}) (interface{}, error)
 	PostComments(ctx context.Context, request interface{}) (interface{}, error)
+	commentEndpoint
 }
 
 type postsEndpoint struct {

@@ -47,9 +47,17 @@ type GetPostCommentsReq struct {
 }
 
 type CommentModel struct {
-	ID          string   `json:"_id,omitempty"`
-	UserID      int      `json:"userId"`
-	Text        string   `json:"text"`
-	ImagesPath  []string `json:"images"`
-	FilesPath   []string `json:"files"`
+	ID         string   `json:"_id,omitempty"`
+	UserID     int      `json:"userId"`
+	Text       string   `json:"text"`
+	ImagesPath []string `json:"images"`
+	FilesPath  []string `json:"files"`
+}
+
+type CreatePostCommentReq struct {
+	Token  string
+	PostID string
+	Text   string
+	Images []*multipart.FileHeader
+	Files  []*multipart.FileHeader
 }

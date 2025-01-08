@@ -23,3 +23,17 @@ type CommentModel struct {
 	ImagesPath  []string `bson:"images"`
 	FilesPath   []string `bson:"files"`
 }
+
+type CreateCommentReq struct {
+	UserID     int
+	PostID     string
+	Text       string
+	ImagesPath []string
+	FilesPath  []string
+}
+
+type UpdateCommentModel struct {
+	Text       string   `bson:"text"`
+	ImagesPath []string `bson:"images"`
+	FilesPath  []string `bson:"files"`
+}

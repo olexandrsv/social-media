@@ -16,7 +16,7 @@ type Service interface {
 	GetPosts(string, int) ([]*post.Post, error)
 	UpdatePost(UpdatePostReq) (*post.Post, error)
 	DeletePost(string, string) error
-	PostComments(string, string) ([]*comment.Comment, error)
+	commentsService
 }
 
 type postsService struct {

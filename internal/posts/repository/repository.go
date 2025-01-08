@@ -6,7 +6,6 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
-	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/domain/post"
 	"time"
 
@@ -23,7 +22,7 @@ type Repository interface {
 	UpdatePost(*post.Post) error
 	GetPost(string) (*post.Post, error)
 	DeletePost(string) error
-	PostComments(string) ([]*comment.Comment, error)
+	commentRepository
 }
 
 type repo struct {
@@ -173,20 +172,7 @@ func (r *repo) DeletePost(id string) error {
 	return nil
 }
 
-func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
-	commentsIDs, err := r.postCommentsIDs(postID)
-	if err != nil{
-		return nil, err
-	}
-	comments, err := r.getCommentsByIDs(commentsIDs)
-	if err != nil{
-		return nil, err
-	}
-
-	return comments, nil
-}
-
-func (r *repo) postCommentsIDs(postID string) ([]string, error){
+func (r *repo) postCommentsIDs(postID string) ([]string, error) {
 	objectID, err := primitive.ObjectIDFromHex(postID)
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -207,13 +193,13 @@ func (r *repo) postCommentsIDs(postID string) ([]string, error){
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
-	
+
 	return result.CommentsIDs, nil
 }
 
-func toObjectIDs(ids []string) ([]primitive.ObjectID, error){
+func toObjectIDs(ids []string) ([]primitive.ObjectID, error) {
 	var objectIDs []primitive.ObjectID
-	for _, id := range ids{
+	for _, id := range ids {
 		objectID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
 			log.Error(errors.WithStack(err))
@@ -224,36 +210,27 @@ func toObjectIDs(ids []string) ([]primitive.ObjectID, error){
 	return objectIDs, nil
 }
 
-func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error){
-	objectIDs, err := toObjectIDs(ids)
+func (r *repo) addPostChild(postID, commentID string) error {
+	objectID, err := primitive.ObjectIDFromHex(postID)
 	if err != nil{
-		return nil, err
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
 	}
 
-	filter := bson.M{
-		"_id": bson.M{
-			"$in": objectIDs,
+	update := bson.M{
+		"$push": bson.M{
+			"comments": commentID,
 		},
 	}
-	sortOption := options.Find().SetSort(bson.M{"_id": 1})
 
-	cur, err := r.comments.Find(context.Background(), filter, sortOption)
+	_, err = r.posts.UpdateByID(context.Background(), objectID, update)
 	if err != nil {
 		log.Error(errors.WithStack(err))
-		return nil, common.ErrInternal
+		return common.ErrInternal
 	}
+	return nil
+}
 
-	var commentModels []CommentModel
-	if err := cur.All(context.Background(), &commentModels); err != nil {
-		return nil, common.ErrInternal
-	}
-
-	var comments []*comment.Comment
-	for _, model := range commentModels {
-		c := comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
-			comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs))
-		comments = append(comments, c)
-	}
-
-	return comments, nil
+func hexFromObjectID(i interface{}) string {
+	return i.(primitive.ObjectID).Hex()
 }
