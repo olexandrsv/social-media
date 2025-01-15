@@ -38,10 +38,13 @@ func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []
 		return nil, common.ErrInvalidToken
 	}
 	post, err := s.repo.CreatePost(repository.CreatePostReq{
-		UserID:     id,
-		Text:       text,
-		FilesPaths:  filesPaths,
-		ImagesPaths: imagesPaths,
+		CreateMessageReq: repository.CreateMessageReq{
+			UserID:     id,
+			Text:       text,
+			FilesPaths:  filesPaths,
+			ImagesPaths: imagesPaths,
+		},
+		
 	})
 	if err != nil {
 		return nil, err

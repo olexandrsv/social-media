@@ -15,10 +15,12 @@ import (
 type commentRepository interface {
 	PostComments(string) ([]*comment.Comment, error)
 	GetComment(string) (*comment.Comment, error)
-	CreatePostComment(CreateCommentReq) (*comment.Comment, error)
+	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
+
 	UpdateComment(*comment.Comment) error
 
 	CommentComments(string) ([]*comment.Comment, error)
+	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
 }
 
 func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
@@ -39,7 +41,7 @@ func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
 	if len(ids) == 0 {
 		return comments, nil
 	}
-	
+
 	objectIDs, err := toObjectIDs(ids)
 	if err != nil {
 		return nil, err
@@ -91,8 +93,10 @@ func (r *repo) GetComment(id string) (*comment.Comment, error) {
 		comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs)), nil
 }
 
-func (r *repo) CreatePostComment(req CreateCommentReq) (*comment.Comment, error) {
-	commentID, err := r.createComment(req)
+func (r *repo) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
+	commentID, err := r.createComment(CreateCommentReq{
+		req.CreateMessageReq,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -101,18 +105,20 @@ func (r *repo) CreatePostComment(req CreateCommentReq) (*comment.Comment, error)
 		return nil, err
 	}
 
-	c := comment.New(commentID, req.UserID, comment.WithText(req.Text), comment.WithImagesPaths(req.ImagesPath),
-		comment.WithFilesPaths(req.FilesPath))
+	c := comment.New(commentID, req.UserID, comment.WithText(req.Text), comment.WithImagesPaths(req.ImagesPaths),
+		comment.WithFilesPaths(req.FilesPaths))
 
 	return c, nil
 }
 
 func (r *repo) createComment(req CreateCommentReq) (string, error) {
 	model := CommentModel{
-		UserID:      req.UserID,
-		Text:        req.Text,
-		ImagesPath:  req.ImagesPath,
-		FilesPath:   req.FilesPath,
+		MessageModel: MessageModel{
+			UserID:     req.UserID,
+			Text:       req.Text,
+			ImagesPath: req.ImagesPaths,
+			FilesPath:  req.FilesPaths,
+		},
 		CommentsIDs: []string{},
 	}
 	res, err := r.comments.InsertOne(context.Background(), model)
@@ -135,9 +141,11 @@ func (r *repo) UpdateComment(c *comment.Comment) error {
 	}
 	update := bson.D{
 		{Key: "$set", Value: UpdateCommentModel{
-			Text:       c.Text(),
-			ImagesPath: c.ImagesPaths(),
-			FilesPath:  c.FilesPaths(),
+			UpdateMessageModel: UpdateMessageModel{
+				Text:       c.Text(),
+				ImagesPath: c.ImagesPaths(),
+				FilesPath:  c.FilesPaths(),
+			},
 		}},
 	}
 
@@ -149,7 +157,7 @@ func (r *repo) UpdateComment(c *comment.Comment) error {
 	return nil
 }
 
-func (r *repo) CommentComments(commentID string) ([]*comment.Comment, error){
+func (r *repo) CommentComments(commentID string) ([]*comment.Comment, error) {
 	commentsIDs, err := r.commentCommentsIDs(commentID)
 	if err != nil {
 		return nil, err
@@ -163,7 +171,7 @@ func (r *repo) CommentComments(commentID string) ([]*comment.Comment, error){
 	return comments, nil
 }
 
-func (r *repo) commentCommentsIDs(commentID string) ([]string, error){
+func (r *repo) commentCommentsIDs(commentID string) ([]string, error) {
 	objectID, err := primitive.ObjectIDFromHex(commentID)
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -186,4 +194,41 @@ func (r *repo) commentCommentsIDs(commentID string) ([]string, error){
 	}
 
 	return model.CommentsIDs, nil
-} 
+}
+
+func (r *repo) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error){
+	commentID, err := r.createComment(CreateCommentReq{
+		CreateMessageReq: req.CreateMessageReq,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = r.addCommentChild(req.CommentID, commentID)
+	if err != nil {
+		return nil, err
+	}
+	return comment.New(commentID, req.UserID, comment.WithText(req.Text), comment.WithImagesPaths(req.ImagesPaths),
+		comment.WithFilesPaths(req.FilesPaths)), nil
+}
+
+func (r *repo) addCommentChild(parentID, commentID string) error {
+	objectID, err := primitive.ObjectIDFromHex(parentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	update := bson.M{
+		"$push": bson.M{
+			"comments": commentID,
+		},
+	}
+
+	_, err = r.comments.UpdateByID(context.Background(), objectID, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	return nil
+}
+

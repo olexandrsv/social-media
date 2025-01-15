@@ -87,6 +87,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	r.Methods("POST").Path("/users/posts/comments/{id}/comments").Handler(transport.NewServer(
+		e.CreateCommentComment,
+		s.decodeCreateCommnetCommentReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 
 	return s
 }
@@ -139,10 +145,12 @@ func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (inte
 	}
 
 	return endpoint.CreatePostReq{
-		Token:      token.Value,
-		Text:       r.FormValue("text"),
-		FilesPath:  filesPath,
-		ImagesPath: imagesPath,
+		Token: token.Value,
+		CreateMessageReq: endpoint.CreateMessageReq{
+			Text:       r.FormValue("text"),
+			FilesPath:  filesPath,
+			ImagesPath: imagesPath,
+		},
 	}, nil
 }
 
@@ -247,12 +255,14 @@ func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interf
 
 	return endpoint.UpdatePostReq{
 		Token:         token.Value,
-		ID:            id,
-		Text:          r.FormValue("text"),
-		Images:        r.MultipartForm.File["images[]"],
-		Files:         r.MultipartForm.File["files[]"],
-		DeletedImages: r.MultipartForm.Value["deletedImages[]"],
-		DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
+		UpdateMessageReq: endpoint.UpdateMessageReq{
+			ID:            id,
+			Text:          r.FormValue("text"),
+			Images:        r.MultipartForm.File["images[]"],
+			Files:         r.MultipartForm.File["files[]"],
+			DeletedImages: r.MultipartForm.Value["deletedImages[]"],
+			DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
+		},
 	}, nil
 }
 

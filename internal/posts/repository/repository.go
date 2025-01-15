@@ -66,11 +66,12 @@ func New() Repository {
 
 func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
 	model := PostModel{
-		ID:         req.ID,
-		UserID:     req.UserID,
-		Text:       req.Text,
-		ImagesPath: req.ImagesPaths,
-		FilesPath:  req.FilesPaths,
+		MessageModel: MessageModel{
+			UserID:     req.UserID,
+			Text:       req.Text,
+			ImagesPath: req.ImagesPaths,
+			FilesPath:  req.FilesPaths,
+		},
 		CommentsIDs: []string{},
 	}
 	res, err := r.posts.InsertOne(context.Background(), model)
@@ -118,9 +119,11 @@ func (r *repo) UpdatePost(post *post.Post) error {
 
 	update := bson.D{
 		{Key: "$set", Value: UpdatePostModel{
-			Text:       post.Text(),
-			ImagesPath: post.ImagesPaths(),
-			FilesPath:  post.FilesPaths(),
+			UpdateMessageModel: UpdateMessageModel{
+				Text:       post.Text(),
+				ImagesPath: post.ImagesPaths(),
+				FilesPath:  post.FilesPaths(),
+			},
 		}},
 	}
 	_, err = coll.UpdateByID(context.Background(), id, update)

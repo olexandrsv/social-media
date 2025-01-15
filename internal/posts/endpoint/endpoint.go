@@ -39,12 +39,7 @@ func (e *postsEndpoint) CreatePost(ctx context.Context, request interface{}) (in
 	if err != nil {
 		return nil, err
 	}
-	return PostModel{
-		ID:          post.ID(),
-		Text:        post.Text(),
-		FilesPaths:  post.FilesPaths(),
-		ImagesPaths: post.ImagesPaths(),
-	}, nil
+	return postToModel(post), nil
 }
 
 func (e *postsEndpoint) GetPosts(ctx context.Context, request interface{}) (interface{}, error) {
@@ -61,13 +56,7 @@ func (e *postsEndpoint) GetPosts(ctx context.Context, request interface{}) (inte
 
 	postModels := make([]PostModel, 0, len(posts))
 	for _, post := range posts {
-		postModels = append(postModels, PostModel{
-			ID:          post.ID(),
-			UserID:      post.UserID(),
-			Text:        post.Text(),
-			FilesPaths:  post.FilesPaths(),
-			ImagesPaths: post.ImagesPaths(),
-		})
+		postModels = append(postModels, postToModel(post))
 	}
 	return postModels, nil
 }
@@ -81,24 +70,20 @@ func (e *postsEndpoint) UpdatePost(ctx context.Context, request interface{}) (in
 
 	post, err := e.s.UpdatePost(service.UpdatePostReq{
 		Token:         req.Token,
-		ID:            req.ID,
-		Text:          req.Text,
-		Images:        req.Images,
-		Files:         req.Files,
-		DeletedImages: req.DeletedImages,
-		DeletedFiles:  req.DeletedFiles,
+		UpdateMessageReq: service.UpdateMessageReq{
+			ID:            req.ID,
+			Text:          req.Text,
+			Images:        req.Images,
+			Files:         req.Files,
+			DeletedImages: req.DeletedImages,
+			DeletedFiles:  req.DeletedFiles,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return PostModel{
-		ID:          post.ID(),
-		UserID:      post.UserID(),
-		Text:        post.Text(),
-		FilesPaths:  post.FilesPaths(),
-		ImagesPaths: post.ImagesPaths(),
-	}, nil
+	return postToModel(post), nil
 }
 
 func (e *postsEndpoint) DeletePost(ctx context.Context, request interface{}) (interface{}, error) {
@@ -133,14 +118,7 @@ func (e *postsEndpoint) PostComments(ctx context.Context, request interface{}) (
 func commentsToModels(comments []*comment.Comment) []CommentModel {
 	commentsModels := make([]CommentModel, 0, len(comments))
 	for _, comment := range comments {
-		commentModel := CommentModel{
-			ID:         comment.ID(),
-			UserID:     comment.UserID(),
-			Text:       comment.Text(),
-			ImagesPath: comment.ImagesPaths(),
-			FilesPath:  comment.FilesPaths(),
-		}
-		commentsModels = append(commentsModels, commentModel)
+		commentsModels = append(commentsModels, commentToModel(comment))
 	}
 	return commentsModels
 }

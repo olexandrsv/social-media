@@ -1,9 +1,48 @@
 package endpoint
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+	"social-media/internal/posts/domain/comment"
+	"social-media/internal/posts/domain/post"
+)
 
-type Token struct {
-	Token string
+type MessageModel struct {
+	ID          string   `json:"id"`
+	UserID      int      `json:"user_id"`
+	Text        string   `json:"text"`
+	FilesPaths  []string `json:"files"`
+	ImagesPaths []string `json:"images"`
+}
+
+type CreateMessageReq struct {
+	Text       string
+	FilesPath  []string
+	ImagesPath []string
+}
+
+type UpdateMessageReq struct {
+	ID            string
+	Text          string
+	Files         []*multipart.FileHeader
+	Images        []*multipart.FileHeader
+	DeletedFiles  []string
+	DeletedImages []string
+}
+
+type PostModel struct {
+	MessageModel
+}
+
+func postToModel(p *post.Post) PostModel {
+	return PostModel{
+		MessageModel: MessageModel{
+			ID:          p.ID(),
+			UserID:      p.UserID(),
+			Text:        p.Text(),
+			ImagesPaths: p.ImagesPaths(),
+			FilesPaths:  p.FilesPaths(),
+		},
+	}
 }
 
 type GetPostsRequest struct {
@@ -12,28 +51,13 @@ type GetPostsRequest struct {
 }
 
 type CreatePostReq struct {
-	Token      string
-	Text       string
-	FilesPath  []string
-	ImagesPath []string
-}
-
-type PostModel struct {
-	ID          string   `json:"id"`
-	UserID      int      `json:"user_id"`
-	Text        string   `json:"text"`
-	FilesPaths  []string `json:"files"`
-	ImagesPaths []string `json:"images"`
+	Token string
+	CreateMessageReq
 }
 
 type UpdatePostReq struct {
-	Token         string
-	ID            string
-	Text          string
-	Files         []*multipart.FileHeader
-	Images        []*multipart.FileHeader
-	DeletedFiles  []string
-	DeletedImages []string
+	Token string
+	UpdateMessageReq
 }
 
 type DeletePostReq struct {
@@ -47,11 +71,19 @@ type GetPostCommentsReq struct {
 }
 
 type CommentModel struct {
-	ID         string   `json:"id"`
-	UserID     int      `json:"user_id"`
-	Text       string   `json:"text"`
-	ImagesPath []string `json:"images"`
-	FilesPath  []string `json:"files"`
+	MessageModel
+}
+
+func commentToModel(c *comment.Comment) CommentModel {
+	return CommentModel{
+		MessageModel: MessageModel{
+			ID:          c.ID(),
+			UserID:      c.UserID(),
+			Text:        c.Text(),
+			ImagesPaths: c.ImagesPaths(),
+			FilesPaths:  c.FilesPaths(),
+		},
+	}
 }
 
 type CreatePostCommentReq struct {
@@ -63,16 +95,23 @@ type CreatePostCommentReq struct {
 }
 
 type UpdateCommentReq struct {
-	Token         string
-	CommentID     string
-	Text          string
-	Images        []*multipart.FileHeader
-	Files         []*multipart.FileHeader
-	DeletedFiles  []string
-	DeletedImages []string
+	Token string
+	UpdateMessageReq
 }
 
 type GetCommentCommentsReq struct {
 	Token     string
 	CommentID string
+}
+
+type CreateCommentCommentReq struct {
+	Token    string
+	ParentID string
+	Text     string
+	Images   []*multipart.FileHeader
+	Files    []*multipart.FileHeader
+}
+
+type Token struct {
+	Token string
 }

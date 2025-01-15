@@ -1,47 +1,58 @@
 package repository
 
-type CreatePostReq struct {
-	ID          string
+type MessageModel struct {
+	ID         string   `bson:"_id,omitempty"`
+	UserID     int      `bson:"userId"`
+	Text       string   `bson:"text"`
+	ImagesPath []string `bson:"images"`
+	FilesPath  []string `bson:"files"`
+}
+
+type CreateMessageReq struct {
 	UserID      int
 	Text        string
 	ImagesPaths []string
 	FilesPaths  []string
 }
 
+type UpdateMessageModel struct {
+	Text       string   `bson:"text"`
+	ImagesPath []string `bson:"images"`
+	FilesPath  []string `bson:"files"`
+}
+
+type CreatePostReq struct {
+	CreateMessageReq `bson:",inline"`
+}
+
 type PostModel struct {
-	ID          string   `bson:"_id,omitempty"`
-	UserID      int      `bson:"userId"`
-	Text        string   `bson:"text"`
-	CommentsIDs []string `bson:"comments"`
-	ImagesPath  []string `bson:"images"`
-	FilesPath   []string `bson:"files"`
+	MessageModel `bson:",inline"`
+	CommentsIDs  []string `bson:"comments"`
 }
 
 type UpdatePostModel struct {
-	Text       string   `bson:"text"`
-	ImagesPath []string `bson:"images"`
-	FilesPath  []string `bson:"files"`
+	UpdateMessageModel
+}
+
+type CreatePostCommentReq struct {
+	PostID string
+	CreateMessageReq
 }
 
 type CommentModel struct {
-	ID          string   `bson:"_id,omitempty"`
-	UserID      int      `bson:"userId"`
-	Text        string   `bson:"text"`
-	CommentsIDs []string `bson:"comments"`
-	ImagesPath  []string `bson:"images"`
-	FilesPath   []string `bson:"files"`
+	MessageModel `bson:",inline"`
+	CommentsIDs  []string `bson:"comments"`
 }
 
 type CreateCommentReq struct {
-	UserID     int
-	PostID     string
-	Text       string
-	ImagesPath []string
-	FilesPath  []string
+	CreateMessageReq
+}
+
+type CreateCommentCommentReq struct {
+	CommentID string
+	CreateMessageReq
 }
 
 type UpdateCommentModel struct {
-	Text       string   `bson:"text"`
-	ImagesPath []string `bson:"images"`
-	FilesPath  []string `bson:"files"`
+	UpdateMessageModel `bson:",inline"`
 }

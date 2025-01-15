@@ -12,6 +12,7 @@ type commentsService interface {
 	UpdateComment(UpdateCommentReq) (*comment.Comment, error)
 
 	CommentComments(string, string) ([]*comment.Comment, error)
+	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
@@ -28,13 +29,15 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 	if err != nil {
 		return nil, err
 	}
-	
-	comment, err := s.repo.CreatePostComment(repository.CreateCommentReq{
-		UserID:     id,
-		PostID:     req.PostID,
-		Text:       req.Text,
-		ImagesPath: imagesPaths,
-		FilesPath:  filesPaths,
+
+	comment, err := s.repo.CreatePostComment(repository.CreatePostCommentReq{
+		PostID: req.PostID,
+		CreateMessageReq: repository.CreateMessageReq{
+			UserID:      id,
+			Text:        req.Text,
+			ImagesPaths: imagesPaths,
+			FilesPaths:  filesPaths,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -43,7 +46,7 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 	return comment, nil
 }
 
-func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, error){
+func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, error) {
 	id, _, err := s.auth.ValidateToken(req.Token)
 	if err != nil {
 		return nil, err
@@ -86,10 +89,36 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 		comment.WithFilesPaths(filesPaths)), nil
 }
 
-func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comment, error){
+func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comment, error) {
 	_, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return nil, err
 	}
 	return s.repo.CommentComments(commentID)
+}
+
+func (s *postsService) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error) {
+	id, _, err := s.auth.ValidateToken(req.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	imagesPaths, err := files.Process(req.Images)
+	if err != nil {
+		return nil, err
+	}
+	filesPaths, err := files.Process(req.Files)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.CreateCommentComment(repository.CreateCommentCommentReq{
+		CommentID: req.ParentID,
+		CreateMessageReq: repository.CreateMessageReq{
+			UserID:      id,
+			Text:        req.Text,
+			ImagesPaths: imagesPaths,
+			FilesPaths:  filesPaths,
+		},
+	})
 }

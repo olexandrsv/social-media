@@ -12,6 +12,7 @@ type commentEndpoint interface {
 	CreatePostComment(ctx context.Context, request interface{}) (interface{}, error)
 	UpdateComment(ctx context.Context, request interface{}) (interface{}, error)
 	CommentComments(ctx context.Context, request interface{}) (interface{}, error)
+	CreateCommentComment(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 func (e *postsEndpoint) CreatePostComment(ctx context.Context, request interface{}) (interface{}, error) {
@@ -24,21 +25,17 @@ func (e *postsEndpoint) CreatePostComment(ctx context.Context, request interface
 	comment, err := e.s.CreatePostComment(service.CreatePostCommentReq{
 		Token:  req.Token,
 		PostID: req.PostID,
-		Text:   req.Text,
-		Images: req.Images,
-		Files:  req.Files,
+		CreateMessageReq: service.CreateMessageReq{
+			Text:   req.Text,
+			Images: req.Images,
+			Files:  req.Files,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return CommentModel{
-		ID:         comment.ID(),
-		UserID:     comment.UserID(),
-		Text:       comment.Text(),
-		ImagesPath: comment.ImagesPaths(),
-		FilesPath:  comment.FilesPaths(),
-	}, nil
+	return commentToModel(comment), nil
 }
 
 func (e *postsEndpoint) UpdateComment(ctx context.Context, request interface{}) (interface{}, error) {
@@ -49,25 +46,21 @@ func (e *postsEndpoint) UpdateComment(ctx context.Context, request interface{}) 
 	}
 
 	comment, err := e.s.UpdateComment(service.UpdateCommentReq{
-		Token:         req.Token,
-		ID:            req.CommentID,
-		Text:          req.Text,
-		Images:        req.Images,
-		Files:         req.Files,
-		DeletedImages: req.DeletedImages,
-		DeletedFiles:  req.DeletedFiles,
+		Token: req.Token,
+		UpdateMessageReq: service.UpdateMessageReq{
+			ID:            req.ID,
+			Text:          req.Text,
+			Images:        req.Images,
+			Files:         req.Files,
+			DeletedImages: req.DeletedImages,
+			DeletedFiles:  req.DeletedFiles,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return CommentModel{
-		ID: comment.ID(),
-		UserID: comment.UserID(),
-		Text: comment.Text(),
-		ImagesPath: comment.ImagesPaths(),
-		FilesPath: comment.FilesPaths(),
-	}, nil
+	return commentToModel(comment), nil
 }
 
 func (e *postsEndpoint) CommentComments(ctx context.Context, request interface{}) (interface{}, error) {
@@ -83,4 +76,27 @@ func (e *postsEndpoint) CommentComments(ctx context.Context, request interface{}
 	}
 
 	return commentsToModels(comments), nil
+}
+
+func (e *postsEndpoint) CreateCommentComment(ctx context.Context, request interface{}) (interface{}, error) {
+	req, ok := request.(CreateCommentCommentReq)
+	if !ok {
+		log.Error(errors.New("can't assign to CreateCommentCommentReq"))
+		return nil, common.ErrInternal
+	}
+
+	comment, err := e.s.CreateCommentComment(service.CreateCommentCommentReq{
+		Token:    req.Token,
+		ParentID: req.ParentID,
+		CreateMessageReq: service.CreateMessageReq{
+			Text:   req.Text,
+			Images: req.Images,
+			Files:  req.Files,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return commentToModel(comment), nil
 }
