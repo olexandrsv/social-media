@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -234,14 +235,40 @@ func (r *repo) addCommentChild(parentID, commentID string) error {
 }
 
 func (r *repo) DeletePostComment(parentID, commentID string) error {
-	err := r.deletePostChild(parentID, commentID)
+	session, err := r.Client.StartSession()
 	if err != nil {
-		return err
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
 	}
-	return r.deleteComment(commentID)
+	defer session.EndSession(context.Background())
+
+	_, err = session.WithTransaction(context.Background(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err := r.deletePostChild(sessCtx, parentID, commentID)
+		if err != nil {
+			if err := session.AbortTransaction(sessCtx); err != nil {
+				log.Error(errors.WithStack(err))
+			}
+			return nil, err
+		}
+
+		err = r.deleteComment(sessCtx, commentID)
+		if err != nil {
+			if err := session.AbortTransaction(sessCtx); err != nil {
+				log.Error(errors.WithStack(err))
+			}
+			return nil, err
+		}
+		
+		if err := session.CommitTransaction(sessCtx); err != nil{
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		return nil, nil
+	})
+	return err
 }
 
-func (r *repo) deletePostChild(parentID, commentID string) error {
+func (r *repo) deletePostChild(ctx context.Context, parentID, commentID string) error {
 	update := bson.M{
 		"$pull": bson.M{
 			"comments": commentID,
@@ -254,7 +281,7 @@ func (r *repo) deletePostChild(parentID, commentID string) error {
 		return common.ErrInternal
 	}
 
-	_, err = r.posts.UpdateByID(context.Background(), objectID, update)
+	_, err = r.posts.UpdateByID(ctx, objectID, update)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return err
@@ -262,17 +289,27 @@ func (r *repo) deletePostChild(parentID, commentID string) error {
 	return nil
 }
 
-func (r *repo) deleteComment(commentID string) error {
+func (r *repo) deleteComment(ctx context.Context, commentID string) error {
 	objectID, err := primitive.ObjectIDFromHex(commentID)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInvalidData
 	}
 
+	comment, err := r.GetComment(commentID)
+	if err != nil {
+		return err
+	}
+	for _, child := range comment.CommentsIDs(){
+		if err = r.deleteComment(ctx, child); err != nil {
+			return common.ErrInternal
+		}
+	}
+
 	filter := bson.M{
 		"_id": objectID,
 	}
-	_, err = r.comments.DeleteOne(context.Background(), filter)
+	_, err = r.comments.DeleteOne(ctx, filter)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal
