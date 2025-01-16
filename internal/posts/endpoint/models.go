@@ -94,6 +94,12 @@ type CreatePostCommentReq struct {
 	Files  []*multipart.FileHeader
 }
 
+type DeletePostCommentReq struct {
+	Token     string
+	ParentID  string
+	CommentID string
+}
+
 type UpdateCommentReq struct {
 	Token string
 	UpdateMessageReq

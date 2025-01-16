@@ -9,7 +9,10 @@ import (
 type commentsService interface {
 	PostComments(string, string) ([]*comment.Comment, error)
 	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
+	DeletePostComment(string, string, string) error
+
 	UpdateComment(UpdateCommentReq) (*comment.Comment, error)
+
 
 	CommentComments(string, string) ([]*comment.Comment, error)
 	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
@@ -44,6 +47,15 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 	}
 
 	return comment, nil
+}
+
+func (s *postsService) DeletePostComment(token, parentID, commentID string) error {
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.DeletePostComment(parentID, commentID)
 }
 
 func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, error) {

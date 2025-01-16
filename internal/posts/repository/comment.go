@@ -16,6 +16,7 @@ type commentRepository interface {
 	PostComments(string) ([]*comment.Comment, error)
 	GetComment(string) (*comment.Comment, error)
 	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
+	DeletePostComment(string, string) error
 
 	UpdateComment(*comment.Comment) error
 
@@ -196,7 +197,7 @@ func (r *repo) commentCommentsIDs(commentID string) ([]string, error) {
 	return model.CommentsIDs, nil
 }
 
-func (r *repo) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error){
+func (r *repo) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error) {
 	commentID, err := r.createComment(CreateCommentReq{
 		CreateMessageReq: req.CreateMessageReq,
 	})
@@ -232,3 +233,50 @@ func (r *repo) addCommentChild(parentID, commentID string) error {
 	return nil
 }
 
+func (r *repo) DeletePostComment(parentID, commentID string) error {
+	err := r.deletePostChild(parentID, commentID)
+	if err != nil {
+		return err
+	}
+	return r.deleteComment(commentID)
+}
+
+func (r *repo) deletePostChild(parentID, commentID string) error {
+	update := bson.M{
+		"$pull": bson.M{
+			"comments": commentID,
+		},
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(parentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	_, err = r.posts.UpdateByID(context.Background(), objectID, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return err
+	}
+	return nil
+}
+
+func (r *repo) deleteComment(commentID string) error {
+	objectID, err := primitive.ObjectIDFromHex(commentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	filter := bson.M{
+		"_id": objectID,
+	}
+	_, err = r.comments.DeleteOne(context.Background(), filter)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
