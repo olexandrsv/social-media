@@ -162,7 +162,43 @@ func (r *repo) GetPost(id string) (*post.Post, error) {
 }
 
 func (r *repo) DeletePost(id string) error {
-	coll := r.DB.Collection("posts")
+	session, err := r.Client.StartSession()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	defer session.EndSession(context.Background())
+
+	_, err = session.WithTransaction(context.Background(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err := r.deletePost(sessCtx, id)
+		if err != nil {
+			if err := session.AbortTransaction(sessCtx); err != nil {
+				log.Error(errors.WithStack(err))
+			}
+			return nil, err
+		}
+
+		if err = session.CommitTransaction(sessCtx); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+
+		return nil, nil
+	})
+	
+	return err
+}
+
+func (r *repo) deletePost(ctx context.Context, id string) error {
+	post, err := r.GetPost(id)
+	if err != nil {
+		return err
+	}
+	for _, commentID := range post.CommentsIDs(){
+		if err := r.deleteComment(ctx, commentID); err != nil {
+			return err
+		}
+	}
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -173,7 +209,7 @@ func (r *repo) DeletePost(id string) error {
 	filter := bson.M{
 		"_id": objectID,
 	}
-	_, err = coll.DeleteOne(context.Background(), filter)
+	_, err = r.posts.DeleteOne(ctx, filter)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal

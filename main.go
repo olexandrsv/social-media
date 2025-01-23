@@ -71,14 +71,14 @@ func main() {
 	//authorized.GET("/follow/:login", users.GetFollowedInfo)
 
 	//authorized.POST("/post", controller.PostMessage)
-	authorized.PUT("/post", controller.ChangeMessage)
-	authorized.GET("/post", controller.GetNPosts)
-	authorized.GET("/post/:login", controller.GetOtherPosts)
+	//authorized.PUT("/post", controller.ChangeMessage)
+	//authorized.GET("/post", controller.GetNPosts)
+	//authorized.GET("/post/:login", controller.GetOtherPosts)
 
 	//authorized.GET("/follow", users.FollowingAccounts)
 
-	authorized.POST("/comment", controller.PostComment)
-	authorized.GET("/comment/:postId", controller.GetComments)
+	//authorized.POST("/comment", controller.PostComment)
+	//authorized.GET("/comment/:postId", controller.GetComments)
 
 	authorized.POST("/room", controller.NewRoom)
 	authorized.GET("/rooms", controller.GetRooms)
