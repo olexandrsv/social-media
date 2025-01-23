@@ -13,9 +13,9 @@ type commentsService interface {
 
 	UpdateComment(UpdateCommentReq) (*comment.Comment, error)
 
-
 	CommentComments(string, string) ([]*comment.Comment, error)
 	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
+	DeleteCommentComment(string, string, string) error
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
@@ -133,4 +133,13 @@ func (s *postsService) CreateCommentComment(req CreateCommentCommentReq) (*comme
 			FilesPaths:  filesPaths,
 		},
 	})
+}
+
+func (s *postsService) DeleteCommentComment(token, parentID, commentID string) error {
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.DeleteCommentComment(parentID, commentID)
 }

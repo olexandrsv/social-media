@@ -23,6 +23,7 @@ type commentRepository interface {
 
 	CommentComments(string) ([]*comment.Comment, error)
 	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
+	DeleteCommentComment(string, string) error
 }
 
 func (r *repo) PostComments(postID string) ([]*comment.Comment, error) {
@@ -258,8 +259,8 @@ func (r *repo) DeletePostComment(parentID, commentID string) error {
 			}
 			return nil, err
 		}
-		
-		if err := session.CommitTransaction(sessCtx); err != nil{
+
+		if err := session.CommitTransaction(sessCtx); err != nil {
 			log.Error(errors.WithStack(err))
 			return nil, common.ErrInternal
 		}
@@ -300,7 +301,7 @@ func (r *repo) deleteComment(ctx context.Context, commentID string) error {
 	if err != nil {
 		return err
 	}
-	for _, child := range comment.CommentsIDs(){
+	for _, child := range comment.CommentsIDs() {
 		if err = r.deleteComment(ctx, child); err != nil {
 			return common.ErrInternal
 		}
@@ -315,5 +316,61 @@ func (r *repo) deleteComment(ctx context.Context, commentID string) error {
 		return common.ErrInternal
 	}
 
+	return nil
+}
+
+func (r *repo) DeleteCommentComment(parentID, commentID string) error {
+	session, err := r.Client.StartSession()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	defer session.EndSession(context.Background())
+
+	_, err = session.WithTransaction(context.Background(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		err := r.deleteCommentChild(sessCtx, parentID, commentID)
+		if err != nil {
+			if err := session.AbortTransaction(sessCtx); err != nil {
+				log.Error(errors.WithStack(err))
+			}
+			return nil, err
+		}
+
+		err = r.deleteComment(sessCtx, commentID)
+		if err != nil {
+			if err := session.AbortTransaction(sessCtx); err != nil {
+				log.Error(errors.WithStack(err))
+			}
+			return nil, err
+		}
+
+		if err := session.CommitTransaction(sessCtx); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		return nil, nil
+	})
+
+	return err
+}
+
+func (r *repo) deleteCommentChild(ctx context.Context, parentID, commentID string) error {
+	update := bson.M{
+		"$pull": bson.M{
+			"comments": commentID,
+		},
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(parentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	_, err = r.posts.UpdateByID(ctx, objectID, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
 	return nil
 }

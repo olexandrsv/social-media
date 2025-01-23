@@ -14,6 +14,7 @@ type commentEndpoint interface {
 	UpdateComment(ctx context.Context, request interface{}) (interface{}, error)
 	CommentComments(ctx context.Context, request interface{}) (interface{}, error)
 	CreateCommentComment(ctx context.Context, request interface{}) (interface{}, error)
+	DeleteCommentComment(ctx context.Context, request interface{}) (interface{}, error)
 }
 
 func (e *postsEndpoint) CreatePostComment(ctx context.Context, request interface{}) (interface{}, error) {
@@ -110,8 +111,16 @@ func (e *postsEndpoint) DeletePostComment(ctx context.Context, request interface
 	}
 
 	err := e.s.DeletePostComment(req.Token, req.ParentID, req.CommentID)
-	if err != nil {
-		return nil, err
+	return nil, err
+}
+
+func (e *postsEndpoint) DeleteCommentComment(ctx context.Context, request interface{}) (interface{}, error){
+	req, ok := request.(DeleteCommentCommentReq)
+	if !ok {
+		log.Error(errors.New("can't assign to DeleteCommentCommentReq"))
+		return nil, common.ErrInternal
 	}
-	return nil, nil
+
+	err := e.s.DeleteCommentComment(req.Token, req.ParentID, req.CommentID)
+	return nil, err
 }

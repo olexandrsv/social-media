@@ -39,7 +39,7 @@ func New() Repository {
 	port := config.App.MongoDB.Port
 	databaseName := config.App.MongoDB.Name
 
-	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s", user, password, host, port, databaseName)
+	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s/?authSource=admin&replicaSet=rs1", user, password, host, port, databaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
 		log.Error(errors.WithStack(err))

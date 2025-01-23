@@ -99,6 +99,12 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		s.encodeResponse,
 		transport.ServerErrorEncoder(s.encodeError),
 	))
+	r.Methods("DELETE").Path("/users/posts/comments/{parent_id}/comments/{comment_id}").Handler(transport.NewServer(
+		e.DeleteCommentComment,
+		s.decodeDeleteCommentCommentReq,
+		s.encodeResponse,
+		transport.ServerErrorEncoder(s.encodeError),
+	))
 
 	return s
 }

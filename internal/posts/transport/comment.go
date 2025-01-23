@@ -138,3 +138,27 @@ func (s *server) decodeCreateCommnetCommentReq(ctx context.Context, r *http.Requ
 		Files:    r.MultipartForm.File["files[]"],
 	}, nil
 }
+
+func (s *server) decodeDeleteCommentCommentReq(ctx context.Context, r *http.Request) (interface{}, error){
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrNoToken
+	}
+
+	params := mux.Vars(r)
+	parentID, ok := params["parent_id"]
+	if !ok {
+		return nil, common.ErrInvalidData
+	}
+	commentID, ok := params["comment_id"]
+	if !ok {
+		return nil, common.ErrInvalidData
+	}
+
+	return endpoint.DeleteCommentCommentReq{
+		Token:     token.Value,
+		ParentID:  parentID,
+		CommentID: commentID,
+	}, nil
+}
