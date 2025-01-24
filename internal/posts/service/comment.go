@@ -1,6 +1,7 @@
 package service
 
 import (
+	"social-media/internal/common"
 	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/repository"
@@ -50,9 +51,18 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 }
 
 func (s *postsService) DeletePostComment(token, parentID, commentID string) error {
-	_, _, err := s.auth.ValidateToken(token)
+	id, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return err
+	}
+
+	comment, err := s.repo.GetComment(commentID)
+	if err != nil {
+		return err
+	}
+
+	if comment.UserID() != id {
+		return common.ErrForbidden
 	}
 
 	return s.repo.DeletePostComment(parentID, commentID)
@@ -67,6 +77,10 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 	c, err := s.repo.GetComment(req.ID)
 	if err != nil {
 		return nil, err
+	}
+
+	if c.UserID() != id {
+		return nil, common.ErrForbidden
 	}
 
 	addedImages, err := files.Process(req.Images)
@@ -96,6 +110,8 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 
 	imagesPaths := append(remainedImages, addedImages...)
 	filesPaths := append(remainedFiles, addedFiles...)
+
+	s.repo.UpdateComment()
 
 	return comment.New(req.ID, id, comment.WithText(req.Text), comment.WithImagesPaths(imagesPaths),
 		comment.WithFilesPaths(filesPaths)), nil
@@ -136,9 +152,18 @@ func (s *postsService) CreateCommentComment(req CreateCommentCommentReq) (*comme
 }
 
 func (s *postsService) DeleteCommentComment(token, parentID, commentID string) error {
-	_, _, err := s.auth.ValidateToken(token)
+	id, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return err
+	}
+
+	comment, err := s.repo.GetComment(commentID)
+	if err != nil {
+		return err
+	}
+
+	if comment.UserID() != id {
+		return common.ErrForbidden
 	}
 
 	return s.repo.DeleteCommentComment(parentID, commentID)

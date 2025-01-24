@@ -72,6 +72,10 @@ func (s *postsService) UpdatePost(req UpdatePostReq) (*post.Post, error) {
 		return nil, err
 	}
 
+	if p.UserID() != id {
+		return nil, common.ErrForbidden
+	}
+
 	addedImages, err := files.Process(req.Images)
 	if err != nil {
 		return nil, err
