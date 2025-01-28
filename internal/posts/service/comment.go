@@ -74,47 +74,25 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 		return nil, err
 	}
 
-	c, err := s.repo.GetComment(req.ID)
+	comment, err := s.repo.GetComment(req.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.UserID() != id {
+	if comment.UserID() != id {
 		return nil, common.ErrForbidden
 	}
 
-	addedImages, err := files.Process(req.Images)
-	if err != nil {
-		return nil, err
-	}
-	addedFiles, err := files.Process(req.Files)
+	err = comment.Update(req.Text, req.Images, req.Files, req.DeletedImages, req.DeletedFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	remainedImages, err := files.Remained(c.ImagesPaths(), req.DeletedImages)
-	if err != nil {
-		return nil, err
-	}
-	remainedFiles, err := files.Remained(c.FilesPaths(), req.DeletedFiles)
-	if err != nil {
+	if err := s.repo.UpdateComment(comment); err != nil {
 		return nil, err
 	}
 
-	if err := files.Delete(req.DeletedImages); err != nil {
-		return nil, err
-	}
-	if err := files.Delete(req.DeletedFiles); err != nil {
-		return nil, err
-	}
-
-	imagesPaths := append(remainedImages, addedImages...)
-	filesPaths := append(remainedFiles, addedFiles...)
-
-	s.repo.UpdateComment()
-
-	return comment.New(req.ID, id, comment.WithText(req.Text), comment.WithImagesPaths(imagesPaths),
-		comment.WithFilesPaths(filesPaths)), nil
+	return comment, nil
 }
 
 func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comment, error) {

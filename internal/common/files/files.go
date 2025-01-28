@@ -1,9 +1,7 @@
 package files
 
 import (
-	"io"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
@@ -36,7 +34,7 @@ func Remained(resources, deletedResources []string) ([]string, error) {
 		resourcesSate[deletedResource] = Deleted
 	}
 
-	var remainedResources []string
+	remainedResources := make([]string, 0)
 	for resource, state := range resourcesSate {
 		if state == Created {
 			remainedResources = append(remainedResources, resource)
@@ -82,31 +80,31 @@ func processFile(file *multipart.FileHeader) (string, error) {
 }
 
 func save(fileHeader *multipart.FileHeader, path string) error {
-	file, err := fileHeader.Open()
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInvalidData
-	}
-	defer file.Close()
-	newFile, err := os.Create(path)
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInternal
-	}
-	defer newFile.Close()
-	_, err = io.Copy(newFile, file)
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInternal
-	}
+	// file, err := fileHeader.Open()
+	// if err != nil {
+	// 	log.Error(errors.WithStack(err))
+	// 	return common.ErrInvalidData
+	// }
+	// defer file.Close()
+	// newFile, err := os.Create(path)
+	// if err != nil {
+	// 	log.Error(errors.WithStack(err))
+	// 	return common.ErrInternal
+	// }
+	// defer newFile.Close()
+	// _, err = io.Copy(newFile, file)
+	// if err != nil {
+	// 	log.Error(errors.WithStack(err))
+	// 	return common.ErrInternal
+	// }
 	return nil
 }
 
 func removeFile(filename string) error {
-	path := "./upload/" + filename
-	if err := os.Remove(path); err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInternal
-	}
+	// path := "./upload/" + filename
+	// if err := os.Remove(path); err != nil {
+	// 	log.Error(errors.WithStack(err))
+	// 	return common.ErrInternal
+	// }
 	return nil
 }

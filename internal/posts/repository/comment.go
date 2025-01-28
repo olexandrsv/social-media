@@ -69,8 +69,7 @@ func (r *repo) getCommentsByIDs(ids []string) ([]*comment.Comment, error) {
 	}
 
 	for _, model := range commentModels {
-		c := comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
-			comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs))
+		c := comment.New(model.ID, model.UserID, model.Text, model.ImagesPath, model.FilesPath, model.CommentsIDs)
 		comments = append(comments, c)
 	}
 
@@ -92,29 +91,25 @@ func (r *repo) GetComment(id string) (*comment.Comment, error) {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
-	return comment.New(model.ID, model.UserID, comment.WithText(model.Text), comment.WithImagesPaths(model.ImagesPath),
-		comment.WithFilesPaths(model.FilesPath), comment.WithCommentsIDs(model.CommentsIDs)), nil
+	return comment.New(model.ID, model.UserID, model.Text, model.ImagesPath, model.FilesPath, model.CommentsIDs), nil
 }
 
 func (r *repo) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
-	commentID, err := r.createComment(CreateCommentReq{
+	comment, err := r.createComment(CreateCommentReq{
 		req.CreateMessageReq,
 	})
 	if err != nil {
 		return nil, err
 	}
-	err = r.addPostChild(req.PostID, commentID)
+	err = r.addPostChild(req.PostID, comment.ID())
 	if err != nil {
 		return nil, err
 	}
 
-	c := comment.New(commentID, req.UserID, comment.WithText(req.Text), comment.WithImagesPaths(req.ImagesPaths),
-		comment.WithFilesPaths(req.FilesPaths))
-
-	return c, nil
+	return comment, nil
 }
 
-func (r *repo) createComment(req CreateCommentReq) (string, error) {
+func (r *repo) createComment(req CreateCommentReq) (*comment.Comment, error) {
 	model := CommentModel{
 		MessageModel: MessageModel{
 			UserID:     req.UserID,
@@ -127,7 +122,7 @@ func (r *repo) createComment(req CreateCommentReq) (string, error) {
 	res, err := r.comments.InsertOne(context.Background(), model)
 	if err != nil {
 		log.Error(errors.WithStack(err))
-		return "", common.ErrInternal
+		return nil, common.ErrInternal
 	}
 	return hexFromObjectID(res.InsertedID), nil
 }
@@ -200,18 +195,17 @@ func (r *repo) commentCommentsIDs(commentID string) ([]string, error) {
 }
 
 func (r *repo) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error) {
-	commentID, err := r.createComment(CreateCommentReq{
+	comment, err := r.createComment(CreateCommentReq{
 		CreateMessageReq: req.CreateMessageReq,
 	})
 	if err != nil {
 		return nil, err
 	}
-	err = r.addCommentChild(req.CommentID, commentID)
+	err = r.addCommentChild(req.CommentID, comment.ID())
 	if err != nil {
 		return nil, err
 	}
-	return comment.New(commentID, req.UserID, comment.WithText(req.Text), comment.WithImagesPaths(req.ImagesPaths),
-		comment.WithFilesPaths(req.FilesPaths)), nil
+	return comment, nil
 }
 
 func (r *repo) addCommentChild(parentID, commentID string) error {

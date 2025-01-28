@@ -3,7 +3,6 @@ package service
 import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
-	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/domain/post"
 	"social-media/internal/posts/repository"
@@ -39,12 +38,11 @@ func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []
 	}
 	post, err := s.repo.CreatePost(repository.CreatePostReq{
 		CreateMessageReq: repository.CreateMessageReq{
-			UserID:     id,
-			Text:       text,
+			UserID:      id,
+			Text:        text,
 			FilesPaths:  filesPaths,
 			ImagesPaths: imagesPaths,
 		},
-		
 	})
 	if err != nil {
 		return nil, err
@@ -76,40 +74,12 @@ func (s *postsService) UpdatePost(req UpdatePostReq) (*post.Post, error) {
 		return nil, common.ErrForbidden
 	}
 
-	addedImages, err := files.Process(req.Images)
-	if err != nil {
-		return nil, err
-	}
-	addedFiles, err := files.Process(req.Files)
-	if err != nil {
-		return nil, err
-	}
+	p.Update(req.Text, req.Images, req.Files, req.DeletedImages, req.DeletedFiles)
 
-	remainedImages, err := files.Remained(p.ImagesPaths(), req.DeletedImages)
-	if err != nil {
+	if err := s.repo.UpdatePost(p); err != nil {
 		return nil, err
 	}
-	remainedFiles, err := files.Remained(p.FilesPaths(), req.DeletedFiles)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := files.Delete(req.DeletedImages); err != nil {
-		return nil, err
-	}
-	if err := files.Delete(req.DeletedFiles); err != nil {
-		return nil, err
-	}
-
-	imagesPaths := append(remainedImages, addedImages...)
-	filesPaths := append(remainedFiles, addedFiles...)
-
-	newPost := post.New(req.ID, id, post.WithText(req.Text), post.WithImagesPaths(imagesPaths),
-		post.WithFilesPaths(filesPaths))
-	if err := s.repo.UpdatePost(newPost); err != nil {
-		return nil, err
-	}
-	return newPost, nil
+	return p, nil
 }
 
 func (s *postsService) DeletePost(token, id string) error {
@@ -130,7 +100,7 @@ func (s *postsService) DeletePost(token, id string) error {
 	return s.repo.DeletePost(id)
 }
 
-func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error){
+func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error) {
 	_, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return nil, err

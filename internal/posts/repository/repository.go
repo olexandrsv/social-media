@@ -82,8 +82,7 @@ func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
 
 	id := res.InsertedID.(primitive.ObjectID).Hex()
 
-	return post.New(id, model.UserID, post.WithText(model.Text),
-		post.WithFilesPaths(model.FilesPath), post.WithImagesPaths(model.ImagesPath)), nil
+	return post.New(id, model.UserID, model.Text, model.FilesPath, model.ImagesPath, nil), nil
 }
 
 func (r *repo) UserPosts(userID int) ([]*post.Post, error) {
@@ -102,8 +101,7 @@ func (r *repo) UserPosts(userID int) ([]*post.Post, error) {
 
 	posts := make([]*post.Post, 0, len(postModels))
 	for _, postModel := range postModels {
-		post := post.New(postModel.ID, postModel.UserID, post.WithText(postModel.Text),
-			post.WithImagesPaths(postModel.ImagesPath), post.WithFilesPaths(postModel.FilesPath))
+		post := post.New(postModel.ID, postModel.UserID, postModel.Text, postModel.ImagesPath, postModel.FilesPath, nil)
 		posts = append(posts, post)
 	}
 	return posts, nil
@@ -157,8 +155,7 @@ func (r *repo) GetPost(id string) (*post.Post, error) {
 		return nil, common.ErrInternal
 	}
 
-	return post.New(model.ID, model.UserID, post.WithText(model.Text), post.WithImagesPaths(model.ImagesPath),
-		post.WithFilesPaths(model.FilesPath), post.WithCommentsIDs(model.CommentsIDs)), nil
+	return post.New(model.ID, model.UserID, model.Text, model.ImagesPath, model.FilesPath, model.CommentsIDs), nil
 }
 
 func (r *repo) DeletePost(id string) error {

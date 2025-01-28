@@ -31,7 +31,7 @@ type PostModel struct {
 }
 
 type UpdatePostModel struct {
-	UpdateMessageModel
+	UpdateMessageModel `bson:",inline"`
 }
 
 type CreatePostCommentReq struct {
