@@ -114,8 +114,8 @@ func (r *repo) createComment(req CreateCommentReq) (*comment.Comment, error) {
 		MessageModel: MessageModel{
 			UserID:     req.UserID,
 			Text:       req.Text,
-			ImagesPath: req.ImagesPaths,
-			FilesPath:  req.FilesPaths,
+			ImagesPath: initIfnil(req.ImagesPaths),
+			FilesPath:  initIfnil(req.FilesPaths),
 		},
 		CommentsIDs: []string{},
 	}
@@ -124,7 +124,10 @@ func (r *repo) createComment(req CreateCommentReq) (*comment.Comment, error) {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
-	return hexFromObjectID(res.InsertedID), nil
+
+	commentID := hexFromObjectID(res.InsertedID)
+	
+	return comment.New(commentID, req.UserID, req.Text, req.ImagesPaths, req.FilesPaths, nil), nil
 }
 
 func (r *repo) UpdateComment(c *comment.Comment) error {
@@ -141,8 +144,8 @@ func (r *repo) UpdateComment(c *comment.Comment) error {
 		{Key: "$set", Value: UpdateCommentModel{
 			UpdateMessageModel: UpdateMessageModel{
 				Text:       c.Text(),
-				ImagesPath: c.ImagesPaths(),
-				FilesPath:  c.FilesPaths(),
+				ImagesPath: initIfnil(c.ImagesPaths()),
+				FilesPath:  initIfnil(c.FilesPaths()),
 			},
 		}},
 	}

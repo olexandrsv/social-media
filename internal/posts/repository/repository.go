@@ -69,8 +69,8 @@ func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
 		MessageModel: MessageModel{
 			UserID:     req.UserID,
 			Text:       req.Text,
-			ImagesPath: req.ImagesPaths,
-			FilesPath:  req.FilesPaths,
+			ImagesPath: initIfnil(req.ImagesPaths),
+			FilesPath:  initIfnil(req.FilesPaths),
 		},
 		CommentsIDs: []string{},
 	}
@@ -119,8 +119,8 @@ func (r *repo) UpdatePost(post *post.Post) error {
 		{Key: "$set", Value: UpdatePostModel{
 			UpdateMessageModel: UpdateMessageModel{
 				Text:       post.Text(),
-				ImagesPath: post.ImagesPaths(),
-				FilesPath:  post.FilesPaths(),
+				ImagesPath: initIfnil(post.ImagesPaths()),
+				FilesPath:  initIfnil(post.FilesPaths()),
 			},
 		}},
 	}
@@ -130,6 +130,13 @@ func (r *repo) UpdatePost(post *post.Post) error {
 		return common.ErrInternal
 	}
 	return nil
+}
+
+func initIfnil(slice []string) []string{
+	if slice == nil {
+		return []string{}
+	}
+	return slice
 }
 
 func (r *repo) GetPost(id string) (*post.Post, error) {
