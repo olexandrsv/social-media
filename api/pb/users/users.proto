@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package users;
+option go_package = "api/pb/users";
+
+service Users{
+    rpc UsersFullNames (UsersFullNamesReq) returns (UsersFullNamesResp) {}
+}
+
+message UsersFullNamesReq{
+    repeated int64 UserID = 1;
+}
+
+message UsersFullNamesResp{
+    repeated FullName fullName = 1;
+    Error err = 2;
+}
+
+message FullName {
+    string name = 1;
+    string surname = 2;
+}
+
+message Error{
+    int64 code = 1;
+    string message = 2;
+}

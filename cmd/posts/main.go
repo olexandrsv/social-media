@@ -1,8 +1,8 @@
 package main
 
 import (
-	"social-media/internal/common"
 	"social-media/internal/common/app"
+	"social-media/internal/common/clients"
 	"social-media/internal/posts/endpoint"
 	"social-media/internal/posts/repository"
 	"social-media/internal/posts/service"
@@ -13,9 +13,10 @@ func main() {
 	app.InitPostsService()
 
 	repo := repository.New()
-	auth := common.NewAuthClient()
+	auth := clients.NewAuthClient()
+	users := clients.NewUsersClient()
 
-	s := service.New(repo, auth)
+	s := service.New(repo, auth, users)
 	e := endpoint.New(s)
 
 	r := transport.NewHTTPServer(e)

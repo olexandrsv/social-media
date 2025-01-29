@@ -3,6 +3,7 @@ package service
 import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/clients"
 	"social-media/internal/users/domain/user"
 	"social-media/internal/users/repository"
 )
@@ -19,10 +20,10 @@ type Service interface {
 
 type userService struct {
 	repo repository.Repository
-	auth common.AuthClient
+	auth clients.AuthClient
 }
 
-func New(r repository.Repository, auth common.AuthClient) Service {
+func New(r repository.Repository, auth clients.AuthClient) Service {
 	return &userService{
 		repo: r,
 		auth: auth,

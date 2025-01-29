@@ -1,22 +1,30 @@
 package main
 
 import (
-	"social-media/internal/common"
 	"social-media/internal/common/app"
+	"social-media/internal/common/clients"
 	"social-media/internal/users/endpoint"
 	"social-media/internal/users/repository"
 	"social-media/internal/users/service"
 	"social-media/internal/users/transport"
+	"sync"
 )
 
 func main() {
 	app.InitUsersService()
+
+	var wg sync.WaitGroup
 	repo := repository.New()
-	auth := common.NewAuthClient()
+	auth := clients.NewAuthClient()
 
 	s := service.New(repo, auth)
 	endpoints := endpoint.NewEndpoints(s)
-	server := transport.NewHTTPServer(endpoints)
 
-	server.Run()
+	httpServer := transport.NewHTTPServer(endpoints)
+	grpcServer := transport.NewGRPCServer(endpoints)
+
+	wg.Add(2)
+	go httpServer.Run(&wg)
+	go grpcServer.Run(&wg)
+	wg.Wait()
 }

@@ -9,6 +9,7 @@ import (
 	"social-media/internal/common/app/log"
 	"social-media/internal/users/endpoint"
 	"strconv"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -17,18 +18,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type server struct {
+type httpServer struct {
 	endpoints endpoint.Endpoints
 	router    *mux.Router
 }
 
-func newServer(e endpoint.Endpoints, r *mux.Router) *server {
-	return &server{e, r}
+func newHTTPServer(e endpoint.Endpoints, r *mux.Router) *httpServer {
+	return &httpServer{e, r}
 }
 
-func NewHTTPServer(endpoints endpoint.Endpoints) *server {
+func NewHTTPServer(endpoints endpoint.Endpoints) *httpServer {
 	r := mux.NewRouter()
-	s := newServer(endpoints, r)
+	s := newHTTPServer(endpoints, r)
 
 	r.Methods("POST").Path("/users").Handler(transport.NewServer(
 		endpoints.CreateUser,
@@ -82,7 +83,9 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *server {
 	return s
 }
 
-func (s *server) Run() {
+func (s *httpServer) Run(wg *sync.WaitGroup) {
+	defer wg.Done()
+	
 	handler := handlers.CORS(
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 		handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"}),
@@ -96,7 +99,7 @@ func (s *server) Run() {
 	}
 }
 
-func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
+func (s *httpServer) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
 	code := 500
 	msg := "Internal server error"
 	if e, ok := err.(common.Error); ok {
@@ -107,14 +110,14 @@ func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWrit
 	w.Write([]byte(msg))
 }
 
-func (s *server) encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+func (s *httpServer) encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if response == nil {
 		return nil
 	}
 	return json.NewEncoder(w).Encode(response)
 }
 
-func (s *server) decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, error) {
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidData
@@ -128,7 +131,7 @@ func (s *server) decodeCreateUserReq(ctx context.Context, r *http.Request) (inte
 	}, nil
 }
 
-func (s *server) decodeLoginReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeLoginReq(_ context.Context, r *http.Request) (interface{}, error) {
 	if err := r.ParseMultipartForm(1 << 20); err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidData
@@ -140,7 +143,7 @@ func (s *server) decodeLoginReq(_ context.Context, r *http.Request) (interface{}
 	}, nil
 }
 
-func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeGetUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -165,7 +168,7 @@ func (s *server) decodeGetUserReq(_ context.Context, r *http.Request) (interface
 	}, nil
 }
 
-func (s *server) decodeUpdateUserReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeUpdateUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -185,7 +188,7 @@ func (s *server) decodeUpdateUserReq(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
-func (s *server) decodeGetUsersByInfoReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeGetUsersByInfoReq(_ context.Context, r *http.Request) (interface{}, error) {
 	info := r.URL.Query().Get("info")
 
 	return endpoint.GetUsersByInfoReq{
@@ -193,7 +196,7 @@ func (s *server) decodeGetUsersByInfoReq(_ context.Context, r *http.Request) (in
 	}, nil
 }
 
-func (s *server) decodeFollowUserReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeFollowUserReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -217,7 +220,7 @@ func (s *server) decodeFollowUserReq(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
-func (s *server) decodeGetFollowedUsersReq(_ context.Context, r *http.Request) (interface{}, error) {
+func (s *httpServer) decodeGetFollowedUsersReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))

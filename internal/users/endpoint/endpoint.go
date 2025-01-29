@@ -3,6 +3,7 @@ package endpoint
 import (
 	"context"
 	"errors"
+	"social-media/api/pb/users"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/users/service"
@@ -158,4 +159,8 @@ func (e usersEndpoints) GetFollowedUsers(ctx context.Context, request interface{
 		})
 	}
 	return userModels, nil
+}
+
+func (e usersEndpoints) UsersFullNames(ctx context.Context, req *users.UsersFullNamesReq) (*users.UsersFullNamesResp, error) {
+	return nil, nil
 }

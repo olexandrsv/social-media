@@ -1,8 +1,10 @@
 package service
 
 import (
+	"fmt"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/clients"
 	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/domain/post"
 	"social-media/internal/posts/repository"
@@ -20,13 +22,15 @@ type Service interface {
 
 type postsService struct {
 	repo repository.Repository
-	auth common.AuthClient
+	auth clients.AuthClient
+	users clients.UsersClient
 }
 
-func New(r repository.Repository, auth common.AuthClient) Service {
+func New(r repository.Repository, auth clients.AuthClient, users clients.UsersClient) Service {
 	return &postsService{
 		repo: r,
 		auth: auth,
+		users: users,
 	}
 }
 
@@ -51,7 +55,13 @@ func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []
 }
 
 func (s *postsService) GetPosts(token string, userID int) ([]*post.Post, error) {
-	_, _, err := s.auth.ValidateToken(token)
+	fullNames, err := s.users.UsersFullNames([]int{1, 2, 3})
+	if err != nil {
+		return nil, err
+	}
+	log.Error(fmt.Errorf("%#v", fullNames))
+	
+	_, _, err = s.auth.ValidateToken(token)
 	if err != nil {
 		return nil, err
 	}

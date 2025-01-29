@@ -1,8 +1,9 @@
-package common
+package clients
 
 import (
 	"context"
 	"social-media/api/pb/auth"
+	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 
@@ -34,10 +35,10 @@ func (c client) GenerateToken(id int, login string) (string, error) {
 	resp, err := c.GenerateJWT(context.Background(), &auth.GenerateJWTReq{Id: int64(id), Login: login})
 	if err != nil {
 		log.Error(errors.WithStack(err))
-		return "", ErrInternal
+		return "", common.ErrInternal
 	}
 	if resp.Err != nil {
-		return "", NewError(int(resp.Err.Code), resp.Err.Message)
+		return "", common.NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 	return resp.Token, nil
 }
@@ -46,10 +47,10 @@ func (c client) ValidateToken(token string) (int, string, error) {
 	resp, err := c.ValidateJWT(context.Background(), &auth.ValidateJWTReq{Token: token})
 	if err != nil {
 		log.Error(errors.WithStack(err))
-		return 0, "", ErrInternal
+		return 0, "", common.ErrInternal
 	}
 	if resp.Err != nil {
-		return 0, "", NewError(int(resp.Err.Code), resp.Err.Message)
+		return 0, "", common.NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 	return int(resp.Id), resp.Login, nil
 }
