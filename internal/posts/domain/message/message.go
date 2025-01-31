@@ -3,11 +3,12 @@ package message
 import (
 	"mime/multipart"
 	"social-media/internal/common/files"
+	"social-media/internal/posts/domain/user"
 )
 
 type Message struct {
 	id          string
-	userID      int
+	user        *user.User
 	text        string
 	imagesPaths []string
 	filesPaths  []string
@@ -16,7 +17,7 @@ type Message struct {
 func New(id string, userID int, text string, imagesPaths, filesPaths []string) *Message {
 	return &Message{
 		id:          id,
-		userID:      userID,
+		user:        user.New(userID, "", ""),
 		text:        text,
 		imagesPaths: imagesPaths,
 		filesPaths:  filesPaths,
@@ -28,7 +29,15 @@ func (m *Message) ID() string {
 }
 
 func (m *Message) UserID() int {
-	return m.userID
+	return m.user.ID()
+}
+
+func (m *Message) UserName() string {
+	return m.user.Name()
+}
+
+func (m *Message) UserSurname() string {
+	return m.user.Surname()
 }
 
 func (m *Message) Text() string {
@@ -41,6 +50,10 @@ func (m *Message) ImagesPaths() []string {
 
 func (m *Message) FilesPaths() []string {
 	return m.filesPaths
+}
+
+func (m *Message) AddUserFullName(name, surname string){
+	m.user.AddFullName(name, surname)
 }
 
 func (m *Message) Update(text string, newImages, newFiles []*multipart.FileHeader, deletedImages, deletedFiles []string) error {

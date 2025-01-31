@@ -1,12 +1,14 @@
 package repository
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 	"social-media/internal/users/domain/user"
+	"strconv"
 
 	"github.com/pkg/errors"
 
@@ -23,6 +25,7 @@ type Repository interface {
 	SubscriptionExists(int, int) (bool, error)
 	Subscribe(int, int) error
 	GetFollowedUsers(int) ([]*user.User, error)
+	UsersFullNames([]int) ([]*user.User, error)
 }
 
 type repo struct {
@@ -192,5 +195,45 @@ func (r *repo) GetFollowedUsers(id int) ([]*user.User, error) {
 		}
 		users = append(users, user.New(id, login))
 	}
+	return users, nil
+}
+
+func (r *repo) UsersFullNames(ids []int) ([]*user.User, error){
+	var b bytes.Buffer
+	var caseBuffer bytes.Buffer
+	for i, id := range ids {
+		if i != 0 {
+			b.WriteString(", ")
+		}
+		v := strconv.Itoa(id)
+		b.WriteString(v)
+		caseBuffer.WriteString(" when ")
+		caseBuffer.WriteString(v)
+		caseBuffer.WriteString(" then ")
+		caseBuffer.WriteString(strconv.Itoa(i+1))
+	}
+	caseBuffer.WriteString(" end;")
+
+	query := fmt.Sprintf("select id, first_name, second_name from users where id in (%s) order by case id %s", 
+		b.String(), caseBuffer.String())
+
+	rows, err := r.db.Query(query)
+	if err == sql.ErrNoRows {
+		return nil, common.ErrNotFound
+	}
+	if err != nil {
+		return nil, common.ErrInternal
+	}
+
+	users := make([]*user.User, 0, len(ids))
+	for rows.Next() {
+		var model UserModel
+		if err := rows.Scan(&model.ID, &model.Name, &model.Surname); err != nil {
+			return nil, err
+		}
+		u := user.New(model.ID, "", user.WithName(model.Name), user.WithSurname(model.Surname))
+		users = append(users, u)
+	}
+
 	return users, nil
 }

@@ -6,9 +6,15 @@ import (
 	"social-media/internal/posts/domain/post"
 )
 
+type User struct {
+	ID      int    `json:"user_id"`
+	Name    string `json:"user_name"`
+	Surname string `json:"user_surname"`
+}
+
 type MessageModel struct {
-	ID          string   `json:"id"`
-	UserID      int      `json:"user_id"`
+	ID string `json:"id"`
+	User
 	Text        string   `json:"text"`
 	FilesPaths  []string `json:"files"`
 	ImagesPaths []string `json:"images"`
@@ -36,8 +42,12 @@ type PostModel struct {
 func postToModel(p *post.Post) PostModel {
 	return PostModel{
 		MessageModel: MessageModel{
-			ID:          p.ID(),
-			UserID:      p.UserID(),
+			ID: p.ID(),
+			User: User{
+				ID:      p.UserID(),
+				Name:    p.UserName(),
+				Surname: p.UserSurname(),
+			},
 			Text:        p.Text(),
 			ImagesPaths: p.ImagesPaths(),
 			FilesPaths:  p.FilesPaths(),
@@ -78,7 +88,11 @@ func commentToModel(c *comment.Comment) CommentModel {
 	return CommentModel{
 		MessageModel: MessageModel{
 			ID:          c.ID(),
-			UserID:      c.UserID(),
+			User: User{
+				ID:      c.UserID(),
+				Name:    c.UserName(),
+				Surname: c.UserSurname(),
+			},
 			Text:        c.Text(),
 			ImagesPaths: c.ImagesPaths(),
 			FilesPaths:  c.FilesPaths(),

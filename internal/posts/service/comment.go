@@ -100,7 +100,26 @@ func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comm
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.CommentComments(commentID)
+	comments, err := s.repo.CommentComments(commentID)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, 0, len(comments))
+	for _, comment := range comments {
+		ids = append(ids, comment.UserID())
+	}
+
+	fullNames, err := s.users.UsersFullNames(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, fullName := range fullNames {
+		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
+	}
+
+	return comments, nil
 }
 
 func (s *postsService) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comment, error) {

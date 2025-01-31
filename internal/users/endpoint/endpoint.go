@@ -3,7 +3,6 @@ package endpoint
 import (
 	"context"
 	"errors"
-	"social-media/api/pb/users"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/users/service"
@@ -17,6 +16,7 @@ type Endpoints interface {
 	GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error)
 	FollowUser(ctx context.Context, request interface{}) (interface{}, error)
 	GetFollowedUsers(ctx context.Context, request interface{}) (interface{}, error)
+	UsersFullNames(ctx context.Context, req UsersFullNamesReq) (UsersFullNamesResp, error)
 }
 
 type usersEndpoints struct {
@@ -161,6 +161,20 @@ func (e usersEndpoints) GetFollowedUsers(ctx context.Context, request interface{
 	return userModels, nil
 }
 
-func (e usersEndpoints) UsersFullNames(ctx context.Context, req *users.UsersFullNamesReq) (*users.UsersFullNamesResp, error) {
-	return nil, nil
+func (e usersEndpoints) UsersFullNames(ctx context.Context, req UsersFullNamesReq) (UsersFullNamesResp, error) {
+	users, err := e.service.UsersFullNames(req.IDs)
+	if err != nil {
+		return UsersFullNamesResp{}, err
+	}
+
+	fullNames := make([]FullName, 0, len(users))
+	for _, user := range users {
+		fullNames = append(fullNames, FullName{
+			Name:    user.Name(),
+			Surname: user.Surname(),
+		})
+	}
+	return UsersFullNamesResp{
+		FullNames: fullNames,
+	}, nil
 }

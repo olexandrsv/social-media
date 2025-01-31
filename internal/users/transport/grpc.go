@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"social-media/api/pb/users"
 	"social-media/internal/common/app/log"
@@ -33,24 +32,33 @@ func NewGRPCServer(endpoints endpoint.Endpoints) *grpcServer {
 }
 
 func (s *grpcServer) UsersFullNames(ctx context.Context, req *users.UsersFullNamesReq) (*users.UsersFullNamesResp, error) {
-	log.Error(fmt.Errorf("%#v", req.UserID))
+	convertedIDs := make([]int, 0, len(req.UserID))
+	for _, id := range req.UserID {
+		convertedIDs = append(convertedIDs, int(id))
+	}
+	resp, err := s.endpoint.UsersFullNames(ctx, endpoint.UsersFullNamesReq{
+		IDs: convertedIDs,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fullNames := make([]*users.FullName, 0, len(resp.FullNames))
+	for _, fullName := range resp.FullNames {
+		fullNames = append(fullNames, &users.FullName{
+			Name:    fullName.Name,
+			Surname: fullName.Surname,
+		})
+	}
+
 	return &users.UsersFullNamesResp{
-		FullName: []*users.FullName{
-			&users.FullName{
-				Name:    "bob",
-				Surname: "smith",
-			},
-			&users.FullName{
-				Name:    "ben",
-				Surname: "arnum",
-			},
-		},
+		FullName: fullNames,
 	}, nil
 }
 
 func (s *grpcServer) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
-	
+
 	listener, err := net.Listen("tcp", ":5053")
 	if err != nil {
 		log.Error(err)

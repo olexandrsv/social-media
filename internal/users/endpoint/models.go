@@ -66,3 +66,16 @@ type UserModel struct {
 	ID    int    `json:"id"`
 	Login string `json:"login"`
 }
+
+type UsersFullNamesReq struct {
+	IDs []int
+}
+
+type UsersFullNamesResp struct {
+	FullNames []FullName
+}
+
+type FullName struct {
+	Name    string
+	Surname string
+}

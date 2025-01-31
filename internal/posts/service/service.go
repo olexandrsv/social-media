@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/common/clients"
@@ -21,15 +20,15 @@ type Service interface {
 }
 
 type postsService struct {
-	repo repository.Repository
-	auth clients.AuthClient
+	repo  repository.Repository
+	auth  clients.AuthClient
 	users clients.UsersClient
 }
 
 func New(r repository.Repository, auth clients.AuthClient, users clients.UsersClient) Service {
 	return &postsService{
-		repo: r,
-		auth: auth,
+		repo:  r,
+		auth:  auth,
 		users: users,
 	}
 }
@@ -55,13 +54,7 @@ func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []
 }
 
 func (s *postsService) GetPosts(token string, userID int) ([]*post.Post, error) {
-	fullNames, err := s.users.UsersFullNames([]int{1, 2, 3})
-	if err != nil {
-		return nil, err
-	}
-	log.Error(fmt.Errorf("%#v", fullNames))
-	
-	_, _, err = s.auth.ValidateToken(token)
+	_, _, err := s.auth.ValidateToken(token)
 	if err != nil {
 		return nil, err
 	}
@@ -116,5 +109,24 @@ func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error
 		return nil, err
 	}
 
-	return s.repo.PostComments(id)
+	comments, err := s.repo.PostComments(id)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, 0, len(comments))
+	for _, comment := range comments{
+		ids = append(ids, comment.UserID())
+	}
+
+	fullNames, err := s.users.UsersFullNames(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, fullName := range fullNames {
+		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
+	}
+
+	return comments, nil
 }

@@ -2,13 +2,13 @@ package service
 
 import "mime/multipart"
 
-type CreateMessageReq struct{
+type CreateMessageReq struct {
 	Text   string
 	Images []*multipart.FileHeader
 	Files  []*multipart.FileHeader
 }
 
-type UpdateMessageReq struct{
+type UpdateMessageReq struct {
 	ID            string
 	Text          string
 	Images        []*multipart.FileHeader
@@ -18,7 +18,7 @@ type UpdateMessageReq struct{
 }
 
 type UpdatePostReq struct {
-	Token         string
+	Token string
 	UpdateMessageReq
 }
 
@@ -28,13 +28,28 @@ type CreatePostCommentReq struct {
 	CreateMessageReq
 }
 
-type UpdateCommentReq struct{
-	Token         string
+type UpdateCommentReq struct {
+	Token string
 	UpdateMessageReq
 }
 
-type CreateCommentCommentReq struct{
-	Token string
+type CreateCommentCommentReq struct {
+	Token    string
 	ParentID string
 	CreateMessageReq
+}
+
+type MessageWithNames struct {
+	ID          string
+	UserID      int
+	UserName    string
+	UserSurname string
+	Text        string
+	ImagesPaths []string
+	FilesPaths  []string
+}
+
+type CommentWithNames struct {
+	MessageWithNames
+	CommentsIDs []string
 }
