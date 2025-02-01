@@ -23,6 +23,7 @@ func New() *Config {
 type AppConfig struct {
 	UsersService usersService
 	PostsService postsService
+	ChatsService chatsService
 	AuthService  authService
 	LogService   logService
 	PostgresDB   database
@@ -53,6 +54,10 @@ type postsService struct {
 	Port string
 }
 
+type chatsService struct {
+	Port string
+}
+
 func (cfg *Config) InitLog() {
 	logSection := cfg.Section("log")
 	App.LogService.Port = logSection.Key("port").String()
@@ -71,6 +76,11 @@ func (cfg *Config) InitUsers() {
 func (cfg *Config) InitPosts() {
 	postsSection := cfg.Section("posts")
 	App.PostsService.Port = postsSection.Key("port").String()
+}
+
+func (cfg *Config) InitChats() {
+	chatsSection := cfg.Section("chats")
+	App.ChatsService.Port = chatsSection.Key("port").String()
 }
 
 func (cfg *Config) InitPostgres() {

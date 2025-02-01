@@ -26,6 +26,13 @@ func InitPostsService(){
 	cfg.InitMongo()
 }
 
+func InitChatsService(){
+	cfg := config.New()
+	defaultInit(cfg)
+	cfg.InitChats()
+	cfg.InitPostgres()
+}
+
 func InitAuthService(){
 	cfg := config.New()
 	defaultInit(cfg)
