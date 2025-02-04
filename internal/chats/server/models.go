@@ -1,6 +1,9 @@
 package server
 
-import "social-media/internal/chats/domain/user"
+import (
+	"social-media/internal/chats/domain/chat"
+	"social-media/internal/chats/domain/user"
+)
 
 type UserChatsResp []BasicUserChat
 
@@ -26,9 +29,24 @@ func userToModel(u *user.User) UserModel {
 }
 
 type ChatModel struct {
+	ID    int         `json:"id"`
 	Name  string      `json:"name"`
 	Owner UserModel   `json:"owner"`
 	Users []UserModel `json:"users"`
+}
+
+func chatToModel(c *chat.Chat) ChatModel{
+	users := make([]UserModel, 0, len(c.Users()))
+	for _, user := range c.Users() {
+		users = append(users, userToModel(user))
+	}
+
+	return ChatModel{
+		ID: c.ID(),
+		Name: c.Name(),
+		Owner: userToModel(c.Owner()),
+		Users: users,
+	}
 }
 
 type CreateChatResp ChatModel

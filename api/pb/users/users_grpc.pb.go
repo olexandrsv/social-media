@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersClient interface {
-	UsersFullNames(ctx context.Context, in *UsersFullNamesReq, opts ...grpc.CallOption) (*UsersFullNamesResp, error)
+	UsersInfo(ctx context.Context, in *UsersInfoReq, opts ...grpc.CallOption) (*UsersInfoResp, error)
 }
 
 type usersClient struct {
@@ -33,9 +33,9 @@ func NewUsersClient(cc grpc.ClientConnInterface) UsersClient {
 	return &usersClient{cc}
 }
 
-func (c *usersClient) UsersFullNames(ctx context.Context, in *UsersFullNamesReq, opts ...grpc.CallOption) (*UsersFullNamesResp, error) {
-	out := new(UsersFullNamesResp)
-	err := c.cc.Invoke(ctx, "/users.Users/UsersFullNames", in, out, opts...)
+func (c *usersClient) UsersInfo(ctx context.Context, in *UsersInfoReq, opts ...grpc.CallOption) (*UsersInfoResp, error) {
+	out := new(UsersInfoResp)
+	err := c.cc.Invoke(ctx, "/users.Users/UsersInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *usersClient) UsersFullNames(ctx context.Context, in *UsersFullNamesReq,
 // All implementations must embed UnimplementedUsersServer
 // for forward compatibility
 type UsersServer interface {
-	UsersFullNames(context.Context, *UsersFullNamesReq) (*UsersFullNamesResp, error)
+	UsersInfo(context.Context, *UsersInfoReq) (*UsersInfoResp, error)
 	mustEmbedUnimplementedUsersServer()
 }
 
@@ -54,8 +54,8 @@ type UsersServer interface {
 type UnimplementedUsersServer struct {
 }
 
-func (UnimplementedUsersServer) UsersFullNames(context.Context, *UsersFullNamesReq) (*UsersFullNamesResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UsersFullNames not implemented")
+func (UnimplementedUsersServer) UsersInfo(context.Context, *UsersInfoReq) (*UsersInfoResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UsersInfo not implemented")
 }
 func (UnimplementedUsersServer) mustEmbedUnimplementedUsersServer() {}
 
@@ -70,20 +70,20 @@ func RegisterUsersServer(s grpc.ServiceRegistrar, srv UsersServer) {
 	s.RegisterService(&Users_ServiceDesc, srv)
 }
 
-func _Users_UsersFullNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UsersFullNamesReq)
+func _Users_UsersInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UsersInfoReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UsersServer).UsersFullNames(ctx, in)
+		return srv.(UsersServer).UsersInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/users.Users/UsersFullNames",
+		FullMethod: "/users.Users/UsersInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServer).UsersFullNames(ctx, req.(*UsersFullNamesReq))
+		return srv.(UsersServer).UsersInfo(ctx, req.(*UsersInfoReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -96,8 +96,8 @@ var Users_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UsersServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "UsersFullNames",
-			Handler:    _Users_UsersFullNames_Handler,
+			MethodName: "UsersInfo",
+			Handler:    _Users_UsersInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

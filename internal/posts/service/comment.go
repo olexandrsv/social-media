@@ -110,7 +110,7 @@ func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comm
 		ids = append(ids, comment.UserID())
 	}
 
-	fullNames, err := s.users.UsersFullNames(ids)
+	fullNames, err := s.users.UsersInfo(ids)
 	if err != nil {
 		return nil, err
 	}

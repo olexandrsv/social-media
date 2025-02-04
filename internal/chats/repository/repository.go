@@ -10,6 +10,7 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/slice"
 	"strconv"
 
 	_ "github.com/lib/pq"
@@ -18,8 +19,11 @@ import (
 
 type Repository interface {
 	UserChats(int) ([]*chat.Chat, error)
-	ChatDetails(int) (*chat.Chat, error)
+	Chat(int) (*chat.Chat, error)
 	CreateChat(CreateChatReq) (*chat.Chat, error)
+	UpdateChat(*chat.Chat) error
+	ChatOwner(int) (int, error)
+	DeleteChat(int) error
 }
 
 type repo struct {
@@ -70,8 +74,8 @@ func (r *repo) UserChats(userID int) ([]*chat.Chat, error) {
 	return chats, nil
 }
 
-func (r *repo) ChatDetails(id int) (*chat.Chat, error) {
-	owner, err := r.getChatOwner(id)
+func (r *repo) Chat(id int) (*chat.Chat, error) {
+	c, err := r.getChat(id)
 	if err != nil {
 		return nil, err
 	}
@@ -80,20 +84,23 @@ func (r *repo) ChatDetails(id int) (*chat.Chat, error) {
 		return nil, err
 	}
 
-	chat := chat.New(id, "", owner, users)
-	return chat, nil
+	return chat.New(c.ID(), c.Name(), c.Owner(), users), nil
 }
 
-func (r *repo) getChatOwner(chatID int) (*user.User, error) {
-	query := `SELECT owner FROM chats WHERE id=$1`
-	row := r.db.QueryRow(query, chatID)
+func (r *repo) getChat(id int) (*chat.Chat, error) {
+	query := `SELECT name, owner FROM chats WHERE id=$1`
+	row := r.db.QueryRow(query, id)
 
-	var id int
-	if err := row.Scan(&id); err != nil {
+	var ownerID int
+	var name string
+	if err := row.Scan(&name, &ownerID); err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
-	return user.New(id), nil
+
+	owner := user.New(ownerID)
+	chat := chat.New(id, name, owner, nil)
+	return chat, nil
 }
 
 func (r *repo) getChatUsers(chatID int) ([]*user.User, error) {
@@ -166,7 +173,7 @@ func (r *repo) createChat(tx *sql.Tx, name string, ownerID int) (int, error) {
 		log.Error(errors.WithStack(err))
 		return 0, common.ErrInternal
 	}
-	
+
 	return id, nil
 }
 
@@ -175,7 +182,7 @@ func (r *repo) addChatUsers(tx *sql.Tx, chatID int, usersIDs []int) error {
 	b.WriteString(`INSERT INTO chats_users (chat_id, user_id) VALUES `)
 	rawChatID := strconv.Itoa(chatID)
 	for i, userID := range usersIDs {
-		if (i != 0){
+		if i != 0 {
 			b.WriteString(",")
 		}
 		b.WriteString("(")
@@ -190,6 +197,136 @@ func (r *repo) addChatUsers(tx *sql.Tx, chatID int, usersIDs []int) error {
 	if err == sql.ErrTxDone {
 		return common.ErrInternal
 	}
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) UpdateChat(c *chat.Chat) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	err = r.updateChat(tx, c.ID(), c.Name())
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error(errors.WithStack(err))
+		}
+		return err
+	}
+
+	err = r.deleteChatUsers(tx, c.ID())
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error(errors.WithStack(err))
+		}
+		return err
+	}
+
+	ids := slice.MustConvert(c.Users(), func(u *user.User) int {
+		return u.ID()
+	})
+	ids = append(ids, c.Owner().ID())
+	err = r.addChatUsers(tx, c.ID(), ids)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error(errors.WithStack(err))
+		}
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) updateChat(tx *sql.Tx, chatID int, name string) error {
+	query := `UPDATE chats SET name=$1 WHERE id=$2`
+
+	_, err := tx.Exec(query, name, chatID)
+	if err == sql.ErrTxDone {
+		return common.ErrInternal
+	}
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) deleteChatUsers(tx *sql.Tx, chatID int) error {
+	query := `DELETE FROM chats_users WHERE chat_id=$1`
+
+	_, err := tx.Exec(query, chatID)
+	if err == sql.ErrTxDone {
+		return common.ErrInternal
+	}
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) ChatOwner(chatID int) (int, error) {
+	query := `SELECT owner FROM chats WHERE id=$1`
+
+	row := r.db.QueryRow(query, chatID)
+
+	var ownerID int
+	if err := row.Scan(&ownerID); err != nil {
+		log.Error(errors.WithStack(err))
+		return 0, common.ErrInternal
+	}
+
+	return ownerID, nil
+}
+
+func (r *repo) DeleteChat(id int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	err = r.deleteChat(tx, id)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error(errors.WithStack(err))
+		}
+		return err
+	}
+
+	err = r.deleteChatUsers(tx, id)
+	if err != nil {
+		if err := tx.Rollback(); err != nil {
+			log.Error(errors.WithStack(err))
+		}
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) deleteChat(tx *sql.Tx, id int) error {
+	query := `DELETE FROM chats WHERE id=$1`
+
+	_, err := tx.Exec(query, id)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal

@@ -119,7 +119,7 @@ func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error
 		ids = append(ids, comment.UserID())
 	}
 
-	fullNames, err := s.users.UsersFullNames(ids)
+	fullNames, err := s.users.UsersInfo(ids)
 	if err != nil {
 		return nil, err
 	}

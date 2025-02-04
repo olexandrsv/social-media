@@ -29,7 +29,8 @@ func (u *User) Surname() string {
 	return u.surname
 }
 
-func (u *User) AddFullName(name, surname string) {
+func (u *User) AddInfo(login, name, surname string) {
+	u.login = login
 	u.name = name
 	u.surname = surname
 }

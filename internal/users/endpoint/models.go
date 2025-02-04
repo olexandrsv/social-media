@@ -67,15 +67,16 @@ type UserModel struct {
 	Login string `json:"login"`
 }
 
-type UsersFullNamesReq struct {
+type UsersInfoReq struct {
 	IDs []int
 }
 
-type UsersFullNamesResp struct {
-	FullNames []FullName
+type UsersInfoResp struct {
+	Info []UserInfo
 }
 
-type FullName struct {
+type UserInfo struct {
+	Login   string
 	Name    string
 	Surname string
 }

@@ -31,28 +31,29 @@ func NewGRPCServer(endpoints endpoint.Endpoints) *grpcServer {
 	return server
 }
 
-func (s *grpcServer) UsersFullNames(ctx context.Context, req *users.UsersFullNamesReq) (*users.UsersFullNamesResp, error) {
+func (s *grpcServer) UsersInfo(ctx context.Context, req *users.UsersInfoReq) (*users.UsersInfoResp, error) {
 	convertedIDs := make([]int, 0, len(req.UserID))
 	for _, id := range req.UserID {
 		convertedIDs = append(convertedIDs, int(id))
 	}
-	resp, err := s.endpoint.UsersFullNames(ctx, endpoint.UsersFullNamesReq{
+	resp, err := s.endpoint.UsersInfo(ctx, endpoint.UsersInfoReq{
 		IDs: convertedIDs,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	fullNames := make([]*users.FullName, 0, len(resp.FullNames))
-	for _, fullName := range resp.FullNames {
-		fullNames = append(fullNames, &users.FullName{
-			Name:    fullName.Name,
-			Surname: fullName.Surname,
+	infos := make([]*users.Info, 0, len(resp.Info))
+	for _, info := range resp.Info {
+		infos = append(infos, &users.Info{
+			Login:   info.Login,
+			Name:    info.Name,
+			Surname: info.Surname,
 		})
 	}
 
-	return &users.UsersFullNamesResp{
-		FullName: fullNames,
+	return &users.UsersInfoResp{
+		Info: infos,
 	}, nil
 }
 

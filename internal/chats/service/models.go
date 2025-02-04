@@ -5,3 +5,10 @@ type CreateChatReq struct {
 	Name     string
 	UsersIDs []int
 }
+
+type UpdateChatReq struct {
+	Token    string
+	ID       int
+	Name     string
+	UsersIDs []int
+}

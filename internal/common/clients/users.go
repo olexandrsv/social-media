@@ -11,10 +11,11 @@ import (
 )
 
 type UsersClient interface {
-	UsersFullNames(ids []int) ([]FullName, error)
+	UsersInfo(ids []int) ([]UsersInfo, error)
 }
 
-type FullName struct {
+type UsersInfo struct {
+	Login   string
 	Name    string
 	Surname string
 }
@@ -34,12 +35,12 @@ func NewUsersClient() UsersClient {
 	}
 }
 
-func (c *usersClient) UsersFullNames(ids []int) ([]FullName, error) {
+func (c *usersClient) UsersInfo(ids []int) ([]UsersInfo, error) {
 	convertedIDs := make([]int64, 0, len(ids))
 	for _, id := range ids {
 		convertedIDs = append(convertedIDs, int64(id))
 	}
-	resp, err := c.UsersClient.UsersFullNames(context.Background(), &users.UsersFullNamesReq{
+	resp, err := c.UsersClient.UsersInfo(context.Background(), &users.UsersInfoReq{
 		UserID: convertedIDs,
 	})
 	if err != nil {
@@ -50,12 +51,13 @@ func (c *usersClient) UsersFullNames(ids []int) ([]FullName, error) {
 		return nil, common.NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 
-	fullNames := make([]FullName, 0, len(resp.FullName))
-	for _, fullName := range resp.FullName {
-		fullNames = append(fullNames, FullName{
-			Name:    fullName.Name,
-			Surname: fullName.Surname,
+	infos := make([]UsersInfo, 0, len(resp.Info))
+	for _, info := range resp.Info {
+		infos = append(infos, UsersInfo{
+			Login:   info.Login,
+			Name:    info.Name,
+			Surname: info.Surname,
 		})
 	}
-	return fullNames, nil
+	return infos, nil
 }

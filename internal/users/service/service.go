@@ -16,7 +16,7 @@ type Service interface {
 	GetUsersByInfo(string) ([]*user.User, error)
 	FollowUser(string, int) error
 	GetFollowedUsers(string) ([]*user.User, error)
-	UsersFullNames([]int)([]*user.User, error)
+	UsersInfo([]int)([]*user.User, error)
 }
 
 type userService struct {
@@ -136,6 +136,6 @@ func (s *userService) GetFollowedUsers(token string) ([]*user.User, error) {
 	return s.repo.GetFollowedUsers(id)
 }
 
-func (s *userService) UsersFullNames(ids []int)([]*user.User, error){
-	return s.repo.UsersFullNames(ids)
+func (s *userService) UsersInfo(ids []int)([]*user.User, error){
+	return s.repo.UsersInfo(ids)
 }

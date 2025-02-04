@@ -25,7 +25,7 @@ type Repository interface {
 	SubscriptionExists(int, int) (bool, error)
 	Subscribe(int, int) error
 	GetFollowedUsers(int) ([]*user.User, error)
-	UsersFullNames([]int) ([]*user.User, error)
+	UsersInfo([]int) ([]*user.User, error)
 }
 
 type repo struct {
@@ -198,7 +198,7 @@ func (r *repo) GetFollowedUsers(id int) ([]*user.User, error) {
 	return users, nil
 }
 
-func (r *repo) UsersFullNames(ids []int) ([]*user.User, error){
+func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 	var b bytes.Buffer
 	var caseBuffer bytes.Buffer
 	for i, id := range ids {
@@ -214,7 +214,7 @@ func (r *repo) UsersFullNames(ids []int) ([]*user.User, error){
 	}
 	caseBuffer.WriteString(" end;")
 
-	query := fmt.Sprintf("select id, first_name, second_name from users where id in (%s) order by case id %s", 
+	query := fmt.Sprintf("select id, login, first_name, second_name from users where id in (%s) order by case id %s", 
 		b.String(), caseBuffer.String())
 
 	rows, err := r.db.Query(query)
@@ -228,10 +228,10 @@ func (r *repo) UsersFullNames(ids []int) ([]*user.User, error){
 	users := make([]*user.User, 0, len(ids))
 	for rows.Next() {
 		var model UserModel
-		if err := rows.Scan(&model.ID, &model.Name, &model.Surname); err != nil {
+		if err := rows.Scan(&model.ID, &model.Login, &model.Name, &model.Surname); err != nil {
 			return nil, err
 		}
-		u := user.New(model.ID, "", user.WithName(model.Name), user.WithSurname(model.Surname))
+		u := user.New(model.ID, model.Login, user.WithName(model.Name), user.WithSurname(model.Surname))
 		users = append(users, u)
 	}
 

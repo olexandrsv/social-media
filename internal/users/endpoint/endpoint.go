@@ -16,7 +16,7 @@ type Endpoints interface {
 	GetUsersByInfo(ctx context.Context, request interface{}) (interface{}, error)
 	FollowUser(ctx context.Context, request interface{}) (interface{}, error)
 	GetFollowedUsers(ctx context.Context, request interface{}) (interface{}, error)
-	UsersFullNames(ctx context.Context, req UsersFullNamesReq) (UsersFullNamesResp, error)
+	UsersInfo(ctx context.Context, req UsersInfoReq) (UsersInfoResp, error)
 }
 
 type usersEndpoints struct {
@@ -161,20 +161,21 @@ func (e usersEndpoints) GetFollowedUsers(ctx context.Context, request interface{
 	return userModels, nil
 }
 
-func (e usersEndpoints) UsersFullNames(ctx context.Context, req UsersFullNamesReq) (UsersFullNamesResp, error) {
-	users, err := e.service.UsersFullNames(req.IDs)
+func (e usersEndpoints) UsersInfo(ctx context.Context, req UsersInfoReq) (UsersInfoResp, error) {
+	users, err := e.service.UsersInfo(req.IDs)
 	if err != nil {
-		return UsersFullNamesResp{}, err
+		return UsersInfoResp{}, err
 	}
 
-	fullNames := make([]FullName, 0, len(users))
+	infos := make([]UserInfo, 0, len(users))
 	for _, user := range users {
-		fullNames = append(fullNames, FullName{
+		infos = append(infos, UserInfo{
+			Login:   user.Login(),
 			Name:    user.Name(),
 			Surname: user.Surname(),
 		})
 	}
-	return UsersFullNamesResp{
-		FullNames: fullNames,
+	return UsersInfoResp{
+		Info: infos,
 	}, nil
 }

@@ -7,6 +7,7 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/slice"
 	"strconv"
 
 	"github.com/gorilla/handlers"
@@ -31,6 +32,9 @@ func New(srv service.Service) Server {
 	}
 	r.Methods("GET").Path("/chats").HandlerFunc(s.getChats)
 	r.Methods("POST").Path("/chats").HandlerFunc(s.createChat)
+	r.Methods("GET").Path("/chats/{id}").HandlerFunc(s.getChat)
+	r.Methods("PUT").Path("/chats/{id}").HandlerFunc(s.updateChat)
+	r.Methods("DELETE").Path("/chats/{id}").HandlerFunc(s.deleteChat)
 
 	return s
 }
@@ -88,16 +92,12 @@ func (s *server) createChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawIDs := r.MultipartForm.Value["users_ids[]"]
-	ids := make([]int, 0, len(rawIDs))
-	
-	for _, rawID := range rawIDs{
-		id, err := strconv.Atoi(rawID)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		ids = append(ids, id)
+	ids, err := slice.Convert(r.MultipartForm.Value["users_ids[]"], func(rawID string) (int, error) {
+		return strconv.Atoi(rawID)
+	})
+	if err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
 	}
 
 	chat, err := s.service.CreateChat(service.CreateChatReq{
@@ -110,16 +110,106 @@ func (s *server) createChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users := make([]UserModel, 0, len(chat.Users()))
-	for _, user := range chat.Users() {
-		users = append(users, userToModel(user))
+	writeJSON(w, chatToModel(chat))
+}
+
+func (s *server) getChat(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		writeError(w, common.ErrNoToken)
+		return
 	}
 
-	writeJSON(w, ChatModel{
-		Name:  chat.Name(),
-		Owner: userToModel(chat.Owner()),
-		Users: users,
+	params := mux.Vars(r)
+	rawID, ok := params["id"]
+	if !ok {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	chat, err := s.service.Chat(token.Value, id)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, chatToModel(chat))
+}
+
+func (s *server) updateChat(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		writeError(w, common.ErrNoToken)
+		return
+	}
+
+	if err := r.ParseMultipartForm(1 << 15); err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	ids, err := slice.Convert(r.MultipartForm.Value["users_ids[]"], func(rawID string) (int, error) {
+		return strconv.Atoi(rawID)
 	})
+	if err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	rawID, ok := mux.Vars(r)["id"]
+	if !ok {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	err = s.service.UpdateChat(service.UpdateChatReq{
+		Token:    token.Value,
+		ID:       id,
+		Name:     r.FormValue("name"),
+		UsersIDs: ids,
+	})
+	writeResponse(w, nil, err)
+}
+
+func (s *server) deleteChat(w http.ResponseWriter, r *http.Request){
+	token, err := r.Cookie("token")
+	if err != nil {
+		writeError(w, common.ErrNoToken)
+		return
+	}
+
+	rawID, ok := mux.Vars(r)["id"]
+	if !ok {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		writeError(w, common.ErrInvalidData)
+		return
+	}
+
+	err = s.service.DeleteChat(token.Value, id)
+	writeResponse(w, nil, err)
+}
+
+func writeResponse(w http.ResponseWriter, resp interface{}, err error){
+	if err != nil{
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, resp)
 }
 
 func writeError(w http.ResponseWriter, err error) {
@@ -138,6 +228,7 @@ func writeError(w http.ResponseWriter, err error) {
 }
 
 func writeJSON(w http.ResponseWriter, resp interface{}) {
+	w.WriteHeader(200)
 	err := json.NewEncoder(w).Encode(resp)
 	if err != nil {
 		log.Error(errors.WithStack(err))

@@ -4,21 +4,22 @@ package users;
 option go_package = "api/pb/users";
 
 service Users{
-    rpc UsersFullNames (UsersFullNamesReq) returns (UsersFullNamesResp) {}
+    rpc UsersInfo (UsersInfoReq) returns (UsersInfoResp) {}
 }
 
-message UsersFullNamesReq{
+message UsersInfoReq{
     repeated int64 UserID = 1;
 }
 
-message UsersFullNamesResp{
-    repeated FullName fullName = 1;
+message UsersInfoResp{
+    repeated Info info = 1;
     Error err = 2;
 }
 
-message FullName {
-    string name = 1;
-    string surname = 2;
+message Info {
+    string login = 1;
+    string name = 2;
+    string surname = 3;
 }
 
 message Error{
