@@ -236,17 +236,6 @@ func (s *server) decodeGetPostsReq(_ context.Context, r *http.Request) (interfac
 	}, nil
 }
 
-func (s *server) decodeTokenReq(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrNoToken
-	}
-	return endpoint.Token{
-		Token: token.Value,
-	}, nil
-}
-
 func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
