@@ -38,6 +38,11 @@ func InitAuthService(){
 	defaultInit(cfg)
 }
 
+func InitLogService() {
+	cfg := config.New()
+	cfg.InitLog()
+}
+
 func InitMock(c config.AppConfig, t testing.TB){
 	config.App = c
 	log.InitMock(t)

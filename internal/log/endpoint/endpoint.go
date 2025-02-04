@@ -19,3 +19,8 @@ func (e Endpoints) Error(ctx context.Context, req *log.LogRequest) (*log.Empty, 
 	e.service.Error(req.Msg)
 	return &log.Empty{}, nil
 }
+
+func (e Endpoints) Info(ctx context.Context, req *log.LogRequest) (*log.Empty, error){
+	e.service.Info(req.Msg)
+	return &log.Empty{}, nil
+}

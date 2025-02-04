@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LogClient interface {
 	Error(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*Empty, error)
+	Info(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type logClient struct {
@@ -35,7 +36,16 @@ func NewLogClient(cc grpc.ClientConnInterface) LogClient {
 
 func (c *logClient) Error(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/Log/Error", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/log.Log/Error", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *logClient) Info(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/log.Log/Info", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +57,7 @@ func (c *logClient) Error(ctx context.Context, in *LogRequest, opts ...grpc.Call
 // for forward compatibility
 type LogServer interface {
 	Error(context.Context, *LogRequest) (*Empty, error)
+	Info(context.Context, *LogRequest) (*Empty, error)
 	mustEmbedUnimplementedLogServer()
 }
 
@@ -56,6 +67,9 @@ type UnimplementedLogServer struct {
 
 func (UnimplementedLogServer) Error(context.Context, *LogRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Error not implemented")
+}
+func (UnimplementedLogServer) Info(context.Context, *LogRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
 }
 func (UnimplementedLogServer) mustEmbedUnimplementedLogServer() {}
 
@@ -80,10 +94,28 @@ func _Log_Error_Handler(srv interface{}, ctx context.Context, dec func(interface
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Log/Error",
+		FullMethod: "/log.Log/Error",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LogServer).Error(ctx, req.(*LogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Log_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LogServer).Info(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/log.Log/Info",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LogServer).Info(ctx, req.(*LogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -92,12 +124,16 @@ func _Log_Error_Handler(srv interface{}, ctx context.Context, dec func(interface
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Log_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Log",
+	ServiceName: "log.Log",
 	HandlerType: (*LogServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Error",
 			Handler:    _Log_Error_Handler,
+		},
+		{
+			MethodName: "Info",
+			Handler:    _Log_Info_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

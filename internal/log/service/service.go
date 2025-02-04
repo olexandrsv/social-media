@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -9,6 +8,7 @@ import (
 
 type Service interface {
 	Error(string)
+	Info(string)
 }
 
 type logService struct {
@@ -28,8 +28,15 @@ func NewService() Service {
 }
 
 func (srv *logService) Error(msg string) {
+	srv.println(msg)
+}
+
+func (srv *logService) Info(msg string) {
+	srv.println(msg)
+}
+
+func (srv *logService) println(msg string) {
 	srv.mux.Lock()
-	fmt.Println(msg)
 	defer srv.mux.Unlock()
 	srv.log.Println(msg)
 }

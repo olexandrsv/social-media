@@ -266,7 +266,7 @@ func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interf
 	}
 
 	return endpoint.UpdatePostReq{
-		Token:         token.Value,
+		Token: token.Value,
 		UpdateMessageReq: endpoint.UpdateMessageReq{
 			ID:            id,
 			Text:          r.FormValue("text"),

@@ -12,6 +12,7 @@ import (
 
 type Logger interface {
 	Error(error)
+	Info(string)
 }
 
 var logger Logger
@@ -36,6 +37,10 @@ func Error(err error) {
 	logger.Error(err)
 }
 
+func Info(msg string){
+	logger.Info(msg)
+}
+
 type logClient struct {
 	log.LogClient
 }
@@ -48,10 +53,21 @@ func (c logClient) Error(err error) {
 	}
 }
 
+func (c logClient) Info(msg string) {
+	_, err := c.LogClient.Error(context.Background(), &log.LogRequest{Msg: msg})
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 type mockLogger struct {
 	t testing.TB
 }
 
 func (l mockLogger) Error(err error) {
 	l.t.Log(err)
+}
+
+func (l mockLogger) Info(msg string) {
+	l.t.Log(msg)
 }

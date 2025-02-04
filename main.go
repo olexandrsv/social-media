@@ -80,8 +80,8 @@ func main() {
 	//authorized.POST("/comment", controller.PostComment)
 	//authorized.GET("/comment/:postId", controller.GetComments)
 
-	authorized.POST("/room", controller.NewRoom)
-	authorized.GET("/rooms", controller.GetRooms)
+	//authorized.POST("/room", controller.NewRoom)
+	//authorized.GET("/rooms", controller.GetRooms)
 
 	authorized.POST("/message", controller.ReceiveMessage)
 	authorized.GET("/msg/:id", controller.GetMessages)

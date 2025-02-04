@@ -3,6 +3,7 @@ package transport
 import (
 	"net"
 	"social-media/api/pb/log"
+	"social-media/internal/common/app/config"
 	"social-media/internal/log/endpoint"
 
 	"google.golang.org/grpc"
@@ -20,7 +21,7 @@ func NewGRPCServer(e endpoint.Endpoints) *server {
 }
 
 func (s *server) Run() {
-	listener, err := net.Listen("tcp", ":5052")
+	listener, err := net.Listen("tcp", ":"+config.App.LogService.Port)
 	if err != nil {
 		panic(err)
 	}
