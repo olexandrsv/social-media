@@ -6,3 +6,9 @@ type ChatModel struct {
 	OwnerID  int
 	UsersIDs []int
 }
+
+type CreateChatReq struct {
+	Name     string
+	OwnerID  int
+	UsersIDs []int
+}

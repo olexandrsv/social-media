@@ -123,7 +123,7 @@ func (r *repo) UserExists(login string) (bool, error) {
 }
 
 func (r *repo) GetUsersByInfo(info string) ([]*user.User, error) {
-	query := `select id, login from users where interests like $1 or bio like $1`
+	query := `select id, login from users where login like $1 or interests like $1 or bio like $1 limit 7`
 	rows, err := r.db.Query(query, "%"+info+"%")
 	if err == sql.ErrNoRows {
 		return nil, common.ErrNotFound

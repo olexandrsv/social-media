@@ -2,6 +2,7 @@ package user
 
 type User struct{
 	id int
+	login string
 	name string
 	surname string
 }
@@ -14,6 +15,10 @@ func New(id int) *User {
 
 func (u *User) ID() int {
 	return u.id
+}
+
+func (u *User) Login() string{
+	return u.login
 }
 
 func (u *User) Name() string {
