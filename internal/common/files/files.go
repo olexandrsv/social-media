@@ -7,10 +7,13 @@ import (
 	"path/filepath"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
+
+var mx sync.Mutex
 
 type resourceLifecycle int
 
@@ -82,6 +85,9 @@ func processFile(file *multipart.FileHeader) (string, error) {
 }
 
 func save(fileHeader *multipart.FileHeader, path string) error {
+	mx.Lock()
+	defer mx.Unlock()
+	
 	file, err := fileHeader.Open()
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -103,6 +109,9 @@ func save(fileHeader *multipart.FileHeader, path string) error {
 }
 
 func removeFile(filename string) error {
+	mx.Lock()
+	defer mx.Unlock()
+
 	path := "./upload/" + filename
 	if err := os.Remove(path); err != nil {
 		log.Error(errors.WithStack(err))

@@ -29,17 +29,18 @@ func New(s service.Service) Endpoint {
 }
 
 func (e *postsEndpoint) CreatePost(ctx context.Context, request interface{}) (interface{}, error) {
-	req, ok := request.(CreatePostReq)
-	if !ok {
-		log.Error(errors.New("can't assign to CreatePostReq"))
-		return nil, common.ErrInternal
-	}
+	// req, ok := request.(CreatePostReq)
+	// if !ok {
+	// 	log.Error(errors.New("can't assign to CreatePostReq"))
+	// 	return nil, common.ErrInternal
+	// }
 
-	post, err := e.s.CreatePost(req.Token, req.Text, req.FilesPath, req.ImagesPath)
-	if err != nil {
-		return nil, err
-	}
-	return postToModel(post), nil
+	// post, err := e.s.CreatePost(req.Token, req.Text, req.FilesPath, req.ImagesPath)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return postToModel(post), nil
+	return nil, nil
 }
 
 func (e *postsEndpoint) GetPosts(ctx context.Context, request interface{}) (interface{}, error) {
@@ -69,8 +70,8 @@ func (e *postsEndpoint) UpdatePost(ctx context.Context, request interface{}) (in
 	}
 
 	post, err := e.s.UpdatePost(service.UpdatePostReq{
-		Token:         req.Token,
 		UpdateMessageReq: service.UpdateMessageReq{
+			Token:         req.Token,
 			ID:            req.ID,
 			Text:          req.Text,
 			Images:        req.Images,

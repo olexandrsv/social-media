@@ -4,7 +4,7 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/common/clients"
-	"social-media/internal/posts/domain/comment"
+	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/post"
 	"social-media/internal/posts/repository"
 
@@ -12,11 +12,12 @@ import (
 )
 
 type Service interface {
-	CreatePost(token, text string, filesPaths, imagesPaths []string) (*post.Post, error)
+	CreatePost(CreatePostReq) (*post.Post, error)
 	GetPosts(string, int) ([]*post.Post, error)
 	UpdatePost(UpdatePostReq) (*post.Post, error)
 	DeletePost(string, string) error
 	commentsService
+	chatMessagesService
 }
 
 type postsService struct {
@@ -33,16 +34,26 @@ func New(r repository.Repository, auth clients.AuthClient, users clients.UsersCl
 	}
 }
 
-func (s *postsService) CreatePost(token, text string, filesPaths, imagesPaths []string) (*post.Post, error) {
-	id, _, err := s.auth.ValidateToken(token)
+func (s *postsService) CreatePost(req CreatePostReq) (*post.Post, error) {
+	id, _, err := s.auth.ValidateToken(req.Token)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return nil, common.ErrInvalidToken
 	}
+
+	imagesPaths, err := files.Process(req.Images)
+	if err != nil {
+		return nil, err
+	}
+	filesPaths, err := files.Process(req.Files)
+	if err != nil {
+		return nil, err
+	}
+
 	post, err := s.repo.CreatePost(repository.CreatePostReq{
 		CreateMessageReq: repository.CreateMessageReq{
 			UserID:      id,
-			Text:        text,
+			Text:        req.Text,
 			FilesPaths:  filesPaths,
 			ImagesPaths: imagesPaths,
 		},
@@ -101,32 +112,4 @@ func (s *postsService) DeletePost(token, id string) error {
 	}
 
 	return s.repo.DeletePost(id)
-}
-
-func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error) {
-	_, _, err := s.auth.ValidateToken(token)
-	if err != nil {
-		return nil, err
-	}
-
-	comments, err := s.repo.PostComments(id)
-	if err != nil {
-		return nil, err
-	}
-
-	ids := make([]int, 0, len(comments))
-	for _, comment := range comments{
-		ids = append(ids, comment.UserID())
-	}
-
-	fullNames, err := s.users.UsersInfo(ids)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, fullName := range fullNames {
-		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
-	}
-
-	return comments, nil
 }

@@ -3,19 +3,14 @@ package transport
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 	"social-media/internal/posts/endpoint"
-	"strconv"
+	"social-media/internal/posts/service"
 
 	transport "github.com/go-kit/kit/transport/http"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/gorilla/handlers"
@@ -23,51 +18,29 @@ import (
 )
 
 type server struct {
-	router *mux.Router
-	e      endpoint.Endpoint
+	router  *mux.Router
+	e       endpoint.Endpoint
+	service service.Service
 }
 
-func newServer(e endpoint.Endpoint, r *mux.Router) *server {
+func newServer(e endpoint.Endpoint, service service.Service, r *mux.Router) *server {
 	return &server{
-		router: r,
-		e:      e,
+		router:  r,
+		e:       e,
+		service: service,
 	}
 }
 
-func NewHTTPServer(e endpoint.Endpoint) *server {
+func NewHTTPServer(e endpoint.Endpoint, service service.Service) *server {
 	r := mux.NewRouter()
-	s := newServer(e, r)
+	s := newServer(e, service, r)
 
-	r.Methods("PUT").Path("/users/posts/{id}").Handler(transport.NewServer(
-		e.UpdatePost,
-		s.decodeUpdatePostReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
-	r.Methods("POST").Path("/users/posts").Handler(transport.NewServer(
-		e.CreatePost,
-		s.decodeCreatePostReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
-	r.Methods("GET").Path("/users/{id}/posts").Handler(transport.NewServer(
-		e.GetPosts,
-		s.decodeGetPostsReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
-	r.Methods("DELETE").Path("/users/posts/{id}").Handler(transport.NewServer(
-		e.DeletePost,
-		s.decodeDeletePostReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
-	r.Methods("GET").Path("/posts/{id}/comments").Handler(transport.NewServer(
-		e.PostComments,
-		s.decodePostCommentsReq,
-		s.encodeResponse,
-		transport.ServerErrorEncoder(s.encodeError),
-	))
+	r.Methods("PUT").Path("/users/posts/{id}").HandlerFunc(s.updatePost)
+	r.Methods("POST").Path("/users/posts").HandlerFunc(s.createPost)
+	r.Methods("GET").Path("/users/{id}/posts").HandlerFunc(s.getPosts)
+	r.Methods("DELETE").Path("/users/posts/{id}").HandlerFunc(s.deletePost)
+
+	r.Methods("GET").Path("/posts/{id}/comments").HandlerFunc(s.postComments)
 
 	r.Methods("POST").Path("/users/posts/{id}/comments").Handler(transport.NewServer(
 		e.CreatePostComment,
@@ -106,6 +79,11 @@ func NewHTTPServer(e endpoint.Endpoint) *server {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
+	r.Methods("GET").Path("/chats/{chat_id}/messages").HandlerFunc(s.getChatMessages)
+	r.Methods("POST").Path("/chats/{chat_id}/messages").HandlerFunc(s.createChatMessage)
+	r.Methods("PUT").Path("/chats/messages/{id}").HandlerFunc(s.updateChatMessage)
+	r.Methods("DELETE").Path("/chats/messages/{id}").HandlerFunc(s.deleteChatMessage)
+
 	return s
 }
 
@@ -135,179 +113,40 @@ func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWrit
 	w.Write([]byte(msg))
 }
 
-func (s *server) decodeCreatePostReq(ctx context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrNoToken
-	}
-	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-
-	filesPath, err := processFormFiles(r.MultipartForm, "files[]")
-	if err != nil {
-		return nil, err
-	}
-
-	imagesPath, err := processFormFiles(r.MultipartForm, "images[]")
-	if err != nil {
-		return nil, err
-	}
-
-	return endpoint.CreatePostReq{
-		Token: token.Value,
-		CreateMessageReq: endpoint.CreateMessageReq{
-			Text:       r.FormValue("text"),
-			FilesPath:  filesPath,
-			ImagesPath: imagesPath,
-		},
-	}, nil
-}
-
-func processFormFiles(form *multipart.Form, key string) ([]string, error) {
-	filesNames := []string{}
-	files := form.File[key]
-	for _, file := range files {
-		filename, err := processFormFile(file)
-		if err != nil {
-			return nil, err
-		}
-		filesNames = append(filesNames, filename)
-	}
-	return filesNames, nil
-}
-
-func processFormFile(file *multipart.FileHeader) (string, error) {
-	extension := filepath.Ext(file.Filename)
-	id, err := uuid.NewUUID()
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return "", common.ErrInternal
-	}
-	filename := id.String() + extension
-	path := "./upload/" + filename
-	if err := saveFile(file, path); err != nil {
-		return "", err
-	}
-	return filename, nil
-}
-
-func saveFile(fileHeader *multipart.FileHeader, path string) error {
-	file, err := fileHeader.Open()
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInvalidData
-	}
-	newFile, err := os.Create(path)
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInternal
-	}
-	_, err = io.Copy(newFile, file)
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return common.ErrInternal
-	}
-	return nil
-}
-
-func (s *server) decodeGetPostsReq(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(err)
-		return nil, common.ErrNoToken
-	}
-
-	params := mux.Vars(r)
-	routeParam, ok := params["id"]
-	if !ok {
-		return nil, common.ErrInvalidData
-	}
-	id, err := strconv.Atoi(routeParam)
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-	return endpoint.GetPostsRequest{
-		Token:  token.Value,
-		UserID: id,
-	}, nil
-}
-
-func (s *server) decodeUpdatePostReq(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrNoToken
-	}
-	params := mux.Vars(r)
-	id, ok := params["id"]
-	if !ok {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-
-	if err := r.ParseMultipartForm(1 << 20); err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-
-	return endpoint.UpdatePostReq{
-		Token: token.Value,
-		UpdateMessageReq: endpoint.UpdateMessageReq{
-			ID:            id,
-			Text:          r.FormValue("text"),
-			Images:        r.MultipartForm.File["images[]"],
-			Files:         r.MultipartForm.File["files[]"],
-			DeletedImages: r.MultipartForm.Value["deletedImages[]"],
-			DeletedFiles:  r.MultipartForm.Value["deletedFiles[]"],
-		},
-	}, nil
-}
-
-func (s *server) decodeDeletePostReq(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrNoToken
-	}
-	params := mux.Vars(r)
-	id, ok := params["id"]
-	if !ok {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-
-	return endpoint.DeletePostReq{
-		Token:  token.Value,
-		PostID: id,
-	}, nil
-}
-
-func (s *server) decodePostCommentsReq(_ context.Context, r *http.Request) (interface{}, error) {
-	token, err := r.Cookie("token")
-	if err != nil {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrNoToken
-	}
-	params := mux.Vars(r)
-	id, ok := params["id"]
-	if !ok {
-		log.Error(errors.WithStack(err))
-		return nil, common.ErrInvalidData
-	}
-
-	return endpoint.GetPostCommentsReq{
-		Token:  token.Value,
-		PostID: id,
-	}, nil
-}
-
 func (s *server) encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	if response == nil {
 		return nil
 	}
 	return json.NewEncoder(w).Encode(response)
+}
+
+func writeResponse(w http.ResponseWriter, resp interface{}, err error) {
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, resp)
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	code := 500
+	msg := "Internal server error"
+	if e, ok := err.(common.Error); ok {
+		code = e.Code()
+		msg = e.Message()
+	}
+	w.WriteHeader(code)
+
+	_, err = w.Write([]byte(msg))
+	if err != nil {
+		log.Error(errors.WithStack(err))
+	}
+}
+
+func writeJSON(w http.ResponseWriter, resp interface{}) {
+	w.WriteHeader(200)
+	err := json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+	}
 }

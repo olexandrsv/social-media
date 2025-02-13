@@ -56,3 +56,17 @@ type CreateCommentCommentReq struct {
 type UpdateCommentModel struct {
 	UpdateMessageModel `bson:",inline"`
 }
+
+type ChatMessageModel struct {
+	MessageModel `bson:",inline"`
+	ChatID       int `bson:"chatId"`
+}
+
+type CreateChatMessageReq struct {
+	CreateMessageReq `bson:",inline"`
+	ChatID           int `bson:"chatId"`
+}
+
+type UpdateChatMessageModel struct {
+	UpdateMessageModel `bson:",inline"`
+}

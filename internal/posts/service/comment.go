@@ -2,6 +2,7 @@ package service
 
 import (
 	"social-media/internal/common"
+	"social-media/internal/common/app/log"
 	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/repository"
@@ -17,6 +18,36 @@ type commentsService interface {
 	CommentComments(string, string) ([]*comment.Comment, error)
 	CreateCommentComment(CreateCommentCommentReq) (*comment.Comment, error)
 	DeleteCommentComment(string, string, string) error
+}
+
+func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error) {
+	_, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Logf("id: %v", id)
+
+	comments, err := s.repo.PostComments(id)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int, 0, len(comments))
+	for _, comment := range comments {
+		ids = append(ids, comment.UserID())
+	}
+
+	fullNames, err := s.users.UsersInfo(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, fullName := range fullNames {
+		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
+	}
+
+	return comments, nil
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {

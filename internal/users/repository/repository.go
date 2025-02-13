@@ -200,28 +200,36 @@ func (r *repo) GetFollowedUsers(id int) ([]*user.User, error) {
 
 func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 	var b bytes.Buffer
-	var caseBuffer bytes.Buffer
 	for i, id := range ids {
 		if i != 0 {
 			b.WriteString(", ")
 		}
 		v := strconv.Itoa(id)
+		b.WriteString("(")
 		b.WriteString(v)
-		caseBuffer.WriteString(" when ")
-		caseBuffer.WriteString(v)
-		caseBuffer.WriteString(" then ")
-		caseBuffer.WriteString(strconv.Itoa(i+1))
+		b.WriteString(",")
+		b.WriteString(strconv.Itoa(i+1))
+		b.WriteString(")")
 	}
-	caseBuffer.WriteString(" end;")
+	b.WriteString(";")
 
-	query := fmt.Sprintf("select id, login, first_name, second_name from users where id in (%s) order by case id %s", 
-		b.String(), caseBuffer.String())
+	createTable := `CREATE TEMP TABLE users_data (
+		user_id INTEGER,
+		idx INTEGER
+	);`
+	insert := `INSERT INTO users_data (user_id, idx) VALUES `+b.String()
+	get := `SELECT id, login, first_name, second_name FROM users_data LEFT JOIN users ON users_data.user_id = users.id ORDER BY users_data.idx;`
+	dropTable := `DROP TABLE users_data;`
+
+	query := createTable+insert+get+dropTable
+	log.Info(query)
 
 	rows, err := r.db.Query(query)
 	if err == sql.ErrNoRows {
 		return nil, common.ErrNotFound
 	}
 	if err != nil {
+		log.Error(errors.WithStack(err))
 		return nil, common.ErrInternal
 	}
 
@@ -235,5 +243,51 @@ func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 		users = append(users, u)
 	}
 
+	log.Logf("users: %+v", users)
+
 	return users, nil
 }
+
+// func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
+// 	var b bytes.Buffer
+// 	var caseBuffer bytes.Buffer
+// 	for i, id := range ids {
+// 		if i != 0 {
+// 			b.WriteString(", ")
+// 		}
+// 		v := strconv.Itoa(id)
+// 		b.WriteString(v)
+// 		caseBuffer.WriteString(" when ")
+// 		caseBuffer.WriteString(v)
+// 		caseBuffer.WriteString(" then ")
+// 		caseBuffer.WriteString(strconv.Itoa(i+1))
+// 	}
+// 	caseBuffer.WriteString(" end;")
+
+// 	query := fmt.Sprintf("select id, login, first_name, second_name from users where id in (%s) order by case id %s", 
+// 		b.String(), caseBuffer.String())
+// 	log.Info(query)
+
+// 	rows, err := r.db.Query(query)
+// 	if err == sql.ErrNoRows {
+// 		return nil, common.ErrNotFound
+// 	}
+// 	if err != nil {
+// 		log.Error(errors.WithStack(err))
+// 		return nil, common.ErrInternal
+// 	}
+
+// 	users := make([]*user.User, 0, len(ids))
+// 	for rows.Next() {
+// 		var model UserModel
+// 		if err := rows.Scan(&model.ID, &model.Login, &model.Name, &model.Surname); err != nil {
+// 			return nil, err
+// 		}
+// 		u := user.New(model.ID, model.Login, user.WithName(model.Name), user.WithSurname(model.Surname))
+// 		users = append(users, u)
+// 	}
+
+// 	log.Logf("users: %+v", users)
+
+// 	return users, nil
+// }

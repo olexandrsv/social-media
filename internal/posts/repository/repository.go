@@ -23,6 +23,7 @@ type Repository interface {
 	GetPost(string) (*post.Post, error)
 	DeletePost(string) error
 	commentRepository
+	chatMessageRepository
 }
 
 type repo struct {
@@ -30,6 +31,7 @@ type repo struct {
 	DB       *mongo.Database
 	posts    *mongo.Collection
 	comments *mongo.Collection
+	messages *mongo.Collection
 }
 
 func New() Repository {
@@ -61,6 +63,7 @@ func New() Repository {
 		DB:       db,
 		posts:    db.Collection("posts"),
 		comments: db.Collection("comments"),
+		messages: db.Collection("messages"),
 	}
 }
 
@@ -82,7 +85,7 @@ func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
 
 	id := res.InsertedID.(primitive.ObjectID).Hex()
 
-	return post.New(id, model.UserID, model.Text, model.FilesPath, model.ImagesPath, nil), nil
+	return post.New(id, model.UserID, model.Text, model.ImagesPath, model.FilesPath, nil), nil
 }
 
 func (r *repo) UserPosts(userID int) ([]*post.Post, error) {
@@ -132,7 +135,7 @@ func (r *repo) UpdatePost(post *post.Post) error {
 	return nil
 }
 
-func initIfnil(slice []string) []string{
+func initIfnil(slice []string) []string {
 	if slice == nil {
 		return []string{}
 	}
@@ -189,7 +192,7 @@ func (r *repo) DeletePost(id string) error {
 
 		return nil, nil
 	})
-	
+
 	return err
 }
 
@@ -198,7 +201,7 @@ func (r *repo) deletePost(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	for _, commentID := range post.CommentsIDs(){
+	for _, commentID := range post.CommentsIDs() {
 		if err := r.deleteComment(ctx, commentID); err != nil {
 			return err
 		}

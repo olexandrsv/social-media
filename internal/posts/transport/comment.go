@@ -5,11 +5,48 @@ import (
 	"net/http"
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/slice"
 	"social-media/internal/posts/endpoint"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
+
+func (s *server) postComments(w http.ResponseWriter, r *http.Request) {
+	req, err := decodeCommentsReq(r)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	comments, err := s.service.PostComments(req.Token, req.ParentID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	models := slice.MustConvert(comments, commentToModel)
+	writeJSON(w, PostCommentsResp(models))
+}
+
+func decodeCommentsReq(r *http.Request) (CommentsReq, error) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return CommentsReq{}, common.ErrNoToken
+	}
+	params := mux.Vars(r)
+	id, ok := params["id"]
+	if !ok {
+		log.Error(errors.WithStack(err))
+		return CommentsReq{}, common.ErrInvalidData
+	}
+
+	return CommentsReq{
+		Token:    token.Value,
+		ParentID: id,
+	}, nil
+}
 
 func (s *server) decodeCreatePostCommentReq(ctx context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
@@ -139,7 +176,7 @@ func (s *server) decodeCreateCommnetCommentReq(ctx context.Context, r *http.Requ
 	}, nil
 }
 
-func (s *server) decodeDeleteCommentCommentReq(ctx context.Context, r *http.Request) (interface{}, error){
+func (s *server) decodeDeleteCommentCommentReq(ctx context.Context, r *http.Request) (interface{}, error) {
 	token, err := r.Cookie("token")
 	if err != nil {
 		log.Error(errors.WithStack(err))

@@ -3,12 +3,14 @@ package service
 import "mime/multipart"
 
 type CreateMessageReq struct {
+	Token  string
 	Text   string
 	Images []*multipart.FileHeader
 	Files  []*multipart.FileHeader
 }
 
 type UpdateMessageReq struct {
+	Token         string
 	ID            string
 	Text          string
 	Images        []*multipart.FileHeader
@@ -17,39 +19,33 @@ type UpdateMessageReq struct {
 	DeletedFiles  []string
 }
 
+type CreatePostReq struct {
+	CreateMessageReq
+}
+
 type UpdatePostReq struct {
-	Token string
 	UpdateMessageReq
 }
 
 type CreatePostCommentReq struct {
-	Token  string
 	PostID string
 	CreateMessageReq
 }
 
 type UpdateCommentReq struct {
-	Token string
 	UpdateMessageReq
 }
 
 type CreateCommentCommentReq struct {
-	Token    string
 	ParentID string
 	CreateMessageReq
 }
 
-type MessageWithNames struct {
-	ID          string
-	UserID      int
-	UserName    string
-	UserSurname string
-	Text        string
-	ImagesPaths []string
-	FilesPaths  []string
+type CreateChatMessageReq struct {
+	ChatID int
+	CreateMessageReq
 }
 
-type CommentWithNames struct {
-	MessageWithNames
-	CommentsIDs []string
+type UpdateChatMessageReq struct{
+	UpdateMessageReq
 }

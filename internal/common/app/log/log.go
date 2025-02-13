@@ -41,6 +41,11 @@ func Info(msg string){
 	logger.Info(msg)
 }
 
+func Logf(format string, a ...any){
+	msg := fmt.Sprintf(format, a...)
+	Info(msg)
+}
+
 type logClient struct {
 	log.LogClient
 }

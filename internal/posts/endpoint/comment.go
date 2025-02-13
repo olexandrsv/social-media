@@ -25,9 +25,9 @@ func (e *postsEndpoint) CreatePostComment(ctx context.Context, request interface
 	}
 
 	comment, err := e.s.CreatePostComment(service.CreatePostCommentReq{
-		Token:  req.Token,
 		PostID: req.PostID,
 		CreateMessageReq: service.CreateMessageReq{
+			Token:  req.Token,
 			Text:   req.Text,
 			Images: req.Images,
 			Files:  req.Files,
@@ -48,8 +48,8 @@ func (e *postsEndpoint) UpdateComment(ctx context.Context, request interface{}) 
 	}
 
 	comment, err := e.s.UpdateComment(service.UpdateCommentReq{
-		Token: req.Token,
 		UpdateMessageReq: service.UpdateMessageReq{
+			Token:         req.Token,
 			ID:            req.ID,
 			Text:          req.Text,
 			Images:        req.Images,
@@ -88,9 +88,9 @@ func (e *postsEndpoint) CreateCommentComment(ctx context.Context, request interf
 	}
 
 	comment, err := e.s.CreateCommentComment(service.CreateCommentCommentReq{
-		Token:    req.Token,
 		ParentID: req.ParentID,
 		CreateMessageReq: service.CreateMessageReq{
+			Token:  req.Token,
 			Text:   req.Text,
 			Images: req.Images,
 			Files:  req.Files,
@@ -103,7 +103,7 @@ func (e *postsEndpoint) CreateCommentComment(ctx context.Context, request interf
 	return commentToModel(comment), nil
 }
 
-func (e *postsEndpoint) DeletePostComment(ctx context.Context, request interface{}) (interface{}, error){
+func (e *postsEndpoint) DeletePostComment(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(DeletePostCommentReq)
 	if !ok {
 		log.Error(errors.New("can't assign to DeletePostCommentReq"))
@@ -114,7 +114,7 @@ func (e *postsEndpoint) DeletePostComment(ctx context.Context, request interface
 	return nil, err
 }
 
-func (e *postsEndpoint) DeleteCommentComment(ctx context.Context, request interface{}) (interface{}, error){
+func (e *postsEndpoint) DeleteCommentComment(ctx context.Context, request interface{}) (interface{}, error) {
 	req, ok := request.(DeleteCommentCommentReq)
 	if !ok {
 		log.Error(errors.New("can't assign to DeleteCommentCommentReq"))

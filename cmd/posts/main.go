@@ -19,6 +19,6 @@ func main() {
 	s := service.New(repo, auth, users)
 	e := endpoint.New(s)
 
-	r := transport.NewHTTPServer(e)
+	r := transport.NewHTTPServer(e, s)
 	r.Run()
 }
