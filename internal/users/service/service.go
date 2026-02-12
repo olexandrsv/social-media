@@ -4,8 +4,13 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/log"
 	"social-media/internal/common/clients"
+	"social-media/internal/common/connection"
+	"social-media/internal/common/slice"
+	"social-media/internal/users/domain/post"
 	"social-media/internal/users/domain/user"
 	"social-media/internal/users/repository"
+
+	"github.com/pkg/errors"
 )
 
 type Service interface {
@@ -16,7 +21,12 @@ type Service interface {
 	GetUsersByInfo(string) ([]*user.User, error)
 	FollowUser(string, int) error
 	GetFollowedUsers(string) ([]*user.User, error)
-	UsersInfo([]int)([]*user.User, error)
+	UsersInfo([]int) ([]*user.User, error)
+	UpdateReadPosts(string, int, string) error
+	LastReadPosts(int) ([]*post.Post, error)
+	SendPostNotification(int, string) error
+	SetUserConnection(string, connection.MessageConnection) error
+	SendNotification(userID int, receiversIDs []int, message string) error
 }
 
 type userService struct {
@@ -32,33 +42,36 @@ func New(r repository.Repository, auth clients.AuthClient) Service {
 }
 
 func (s *userService) CreateUser(login, name, surname, password string) (string, int, error) {
+	var userID int
+	var token string
 	exists, err := s.repo.UserExists(login)
 	if err != nil {
-		return "", 0, err
+		return token, userID, err
 	}
 	if exists {
-		return "", 0, common.ErrLoginExists
+		return token, userID, common.ErrLoginExists
 	}
 
 	hashPsw, err := hashPassword(password)
 	if err != nil {
-		return "", 0, err
+		return token, userID, err
 	}
 
 	userModel := repository.NewUserModel(login, name, surname, hashPsw)
 
-	user, err := s.repo.CreateUser(userModel)
+	u, err := s.repo.CreateUser(userModel)
 	if err != nil {
-		return "", 0, err
+		return token, userID, err
 	}
 
-	user.Register()
-
-	token, err := s.auth.GenerateToken(user.ID(), user.Login())
+	token, err = s.auth.GenerateToken(u.ID(), u.Login())
 	if err != nil {
-		return "", 0, err
+		return token, userID, err
 	}
-	return token, user.ID(), nil
+
+	userID = u.ID()
+	user.Set(u)
+	return token, userID, nil
 }
 
 func (s *userService) Login(login, password string) (string, int, error) {
@@ -71,14 +84,15 @@ func (s *userService) Login(login, password string) (string, int, error) {
 		return "", 0, common.ErrWrongCredentials
 	}
 
-	user := user.New(id, login)
-	user.Register()
+	u := user.New(id, login)
 
-	token, err := s.auth.GenerateToken(user.ID(), user.Login())
+	token, err := s.auth.GenerateToken(u.ID(), u.Login())
 	if err != nil {
 		return "", 0, err
 	}
-	return token, user.ID(), nil
+
+	user.Set(u)
+	return token, u.ID(), nil
 }
 
 func (s *userService) GetUser(token string, id int) (*user.User, error) {
@@ -136,6 +150,59 @@ func (s *userService) GetFollowedUsers(token string) ([]*user.User, error) {
 	return s.repo.GetFollowedUsers(id)
 }
 
-func (s *userService) UsersInfo(ids []int)([]*user.User, error){
+func (s *userService) UsersInfo(ids []int) ([]*user.User, error) {
 	return s.repo.UsersInfo(ids)
+}
+
+func (s *userService) UpdateReadPosts(token string, ownerID int, lastReadPostID string) error {
+	id, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdateReadPosts(ownerID, id, lastReadPostID)
+}
+
+func (s *userService) LastReadPosts(userID int) ([]*post.Post, error) {
+	return s.repo.LastReadPosts(userID)
+}
+
+func (s *userService) SendPostNotification(userID int, message string) error {
+	followers, err := s.repo.GetFollowers(userID)
+	if err != nil {
+		return err
+	}
+	followersIDs := slice.MustConvert(followers, func(u *user.User) int {
+		return u.ID()
+	})
+	return s.SendNotification(userID, followersIDs, message)
+}
+
+func (s *userService) SendNotification(userID int, receiversIDs []int, message string) error {
+	for _, receiver := range receiversIDs {
+		u, ok := user.Get(receiver)
+		if !ok {
+			continue
+		}
+		if err := u.Send(message); err != nil {
+			log.Error(errors.WithStack(err))
+			return common.ErrInternal
+		}
+	}
+	return nil
+}
+
+func (s *userService) SetUserConnection(token string, conn connection.MessageConnection) error {
+	id, login, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+	u, exist := user.Get(id)
+	if !exist {
+		u = user.New(id, login)
+		user.Set(u)
+	}
+
+	u.SetConnection(conn)
+	return nil
 }

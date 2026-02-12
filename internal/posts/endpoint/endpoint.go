@@ -14,7 +14,6 @@ type Endpoint interface {
 	GetPosts(ctx context.Context, request interface{}) (interface{}, error)
 	UpdatePost(ctx context.Context, request interface{}) (interface{}, error)
 	DeletePost(ctx context.Context, request interface{}) (interface{}, error)
-	PostComments(ctx context.Context, request interface{}) (interface{}, error)
 	commentEndpoint
 }
 
@@ -99,21 +98,6 @@ func (e *postsEndpoint) DeletePost(ctx context.Context, request interface{}) (in
 		return nil, err
 	}
 	return nil, nil
-}
-
-func (e *postsEndpoint) PostComments(ctx context.Context, request interface{}) (interface{}, error) {
-	req, ok := request.(GetPostCommentsReq)
-	if !ok {
-		log.Error(errors.New("can't assign to GetPostCommentsReq"))
-		return nil, common.ErrInternal
-	}
-
-	comments, err := e.s.PostComments(req.Token, req.PostID)
-	if err != nil {
-		return nil, err
-	}
-
-	return commentsToModels(comments), nil
 }
 
 func commentsToModels(comments []*comment.Comment) []CommentModel {

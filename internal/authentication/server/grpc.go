@@ -6,6 +6,7 @@ import (
 	"social-media/api/pb/auth"
 	"social-media/internal/authentication/service"
 	"social-media/internal/common"
+	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 
 	"google.golang.org/grpc"
@@ -50,6 +51,24 @@ func (s *server) ValidateJWT(ctx context.Context, req *auth.ValidateJWTReq) (*au
 	}, nil
 }
 
+func (s *server) GenerateSignedUrl(ctx context.Context, req *auth.GenerateSignedUrlReq) (*auth.GenerateSignedUrlResp, error) {
+	token, err := s.service.GenerateSignedUrl(req.FileID)
+
+	return &auth.GenerateSignedUrlResp{
+		Token: token,
+		Err:   convertToError(err),
+	}, nil
+}
+
+func (s *server) ValidateSignedUrl(ctx context.Context, req *auth.ValidateSignedUrlReq) (*auth.ValidateSignedUrlResp, error) {
+	fileID, err := s.service.ValidateSignedUrl(req.Token)
+
+	return &auth.ValidateSignedUrlResp{
+		FileID: fileID,
+		Err:    convertToError(err),
+	}, nil
+}
+
 func convertToError(err error) *auth.Error {
 	if err == nil {
 		return nil
@@ -67,7 +86,7 @@ func convertToError(err error) *auth.Error {
 }
 
 func (s *server) Run() {
-	listener, err := net.Listen("tcp", ":5051")
+	listener, err := net.Listen("tcp", ":"+config.App.AuthService.Port)
 	if err != nil {
 		log.Error(err)
 		panic(err)

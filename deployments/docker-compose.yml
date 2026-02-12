@@ -1,0 +1,154 @@
+services:
+
+  projects-database:
+    build:
+      dockerfile: Dockerfile
+      context: ./databases/postgres_db
+      args:
+        SERVICE: "projects"
+    volumes:
+      - projects_volume:/var/lib/postgresql/data
+
+  users-database:
+    build:
+      dockerfile: Dockerfile
+      context: ./databases/postgres_db/
+      args:
+        SERVICE: "users"
+    volumes:
+      - users_volume:/var/lib/postgresql/data
+  
+  chats-database:
+    build:
+      dockerfile: Dockerfile
+      context: ./databases/postgres_db/
+      args:
+        SERVICE: "chats"
+    volumes:
+      - chats_volume:/var/lib/postgresql/data
+  
+  mongo1:
+    build: ./databases/mongo_db
+    command: ["--replSet", "rs1", "--bind_ip_all", "--port", "27017"]
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs1',members:[{_id:0,host:'mongo1:27017'}]}) }" | mongosh --port 27017
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      start_interval: 1s
+      retries: 30
+    volumes:
+      - "mongo1_data:/data/db"
+      - "mongo1_config:/data/configdb"
+  
+  frontend:
+    build: 
+      dockerfile: ./social-media/deployments/frontend/Dockerfile
+      context: ../../
+    ports:
+      - "8080:8080"
+  
+  log:
+    build:
+      dockerfile: ./deployments/services/Dockerfile.2port
+      context: ..
+      args:
+        SERVICE: "log"
+        FIRST_PORT: "8090"
+        SECOND_PORT: "8084"
+    ports:
+      - "8084:8084"
+      - "8090:8090"
+  
+  auth:
+    build:
+      dockerfile: ./deployments/services/Dockerfile
+      context: ..
+      args:
+        SERVICE: "authentication"
+        PORT: "8085"
+    ports:
+      - "8085:8085"
+    depends_on:
+      - log
+  
+  projects:
+    build:
+      dockerfile: ./deployments/services/Dockerfile
+      context: ..
+      args:
+        SERVICE: "projects"
+        PORT: "8086"
+    ports:
+      - "8086:8086"
+    depends_on:
+      - log
+      - auth
+      - projects-database
+  
+  chats:
+    build:
+      dockerfile: ./deployments/services/Dockerfile
+      context: ..
+      args:
+        SERVICE: "chats"
+        PORT: "8083"
+    ports:
+      - "8083:8083"
+    depends_on:
+      - log
+      - auth
+      - chats-database
+
+  posts:
+    build:
+      dockerfile: ./deployments/services/Dockerfile.2port
+      context: ..
+      args:
+        SERVICE: "posts"
+        FIST_PORT: "8082"
+        SECOND_PORT: "8088"
+    ports:
+      - "8082:8082"
+      - "8088:8088"
+    depends_on:
+      - mongo1
+      - log
+      - auth
+      - chats
+      - ai
+    volumes:
+      - "files_volume:/cmd/upload"
+  
+  ai:
+    build:
+      dockerfile: ./deployments/services/Dockerfile.python
+      context: ..
+    ports:
+      - "8000:8000"
+
+  users:
+    build:
+      dockerfile: ./deployments/services/Dockerfile.2port
+      context: ..
+      args:
+        SERVICE: "users"
+        FIST_PORT: "8081"
+        SECOND_PORT: "8087"
+    ports:
+      - "8081:8081"
+      - "8087:8087"
+    depends_on:
+      - log
+      - auth
+      - users-database
+
+volumes:
+  projects_volume:
+  users_volume:
+  chats_volume:
+  mongo1_data:
+  mongo1_config:
+  files_volume:

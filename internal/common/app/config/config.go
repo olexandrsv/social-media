@@ -21,21 +21,39 @@ func New() *Config {
 }
 
 type AppConfig struct {
-	UsersService usersService
+	Users        usersService
 	PostsService postsService
-	ChatsService chatsService
+	Chats        chatsService
+	Projects     projectsService
 	AuthService  authService
 	LogService   logService
+	FilesService filesService
 	PostgresDB   database
 	MongoDB      database
 }
 
-type authService struct {
+type service struct {
+	Host string
 	Port string
 }
 
+type grpcHttpService struct {
+	Host     string
+	GrpcPort string
+	HttpPort string
+}
+
+type projectsService struct {
+	Service service
+	DB      database
+}
+
+type authService struct {
+	service
+}
+
 type logService struct {
-	Port string
+	grpcHttpService
 }
 
 type database struct {
@@ -47,40 +65,92 @@ type database struct {
 }
 
 type usersService struct {
-	Port string
+	Service grpcHttpService
+	DB      database
 }
 
 type postsService struct {
-	Port string
+	grpcHttpService
 }
 
 type chatsService struct {
-	Port string
+	Service grpcHttpService
+	DB      database
+}
+
+type filesService struct {
+	Protocol string
+	service
 }
 
 func (cfg *Config) InitLog() {
 	logSection := cfg.Section("log")
-	App.LogService.Port = logSection.Key("port").String()
+	App.LogService.Host = logSection.Key("host").String()
+	App.LogService.HttpPort = logSection.Key("http_port").String()
+	App.LogService.GrpcPort = logSection.Key("grpc_port").String()
 }
 
 func (cfg *Config) InitAuth() {
 	authSection := cfg.Section("auth")
+	App.AuthService.Host = authSection.Key("host").String()
 	App.AuthService.Port = authSection.Key("port").String()
 }
 
 func (cfg *Config) InitUsers() {
-	usersSection := cfg.Section("users")
-	App.UsersService.Port = usersSection.Key("port").String()
+	App.Users.Service = cfg.parseGrpcHttpService("users.service")
+	App.Users.DB = cfg.parseDatabase("users.database")
+}
+
+func (cfg *Config) parseGrpcHttpService(sectionName string) grpcHttpService {
+	section := cfg.Section(sectionName)
+	return grpcHttpService{
+		Host:     section.Key("host").String(),
+		HttpPort: section.Key("http_port").String(),
+		GrpcPort: section.Key("grpc_port").String(),
+	}
+}
+
+func (cfg *Config) parseService(sectionName string) service {
+	section := cfg.Section(sectionName)
+	return service{
+		Host: section.Key("host").String(),
+		Port: section.Key("port").String(),
+	}
+}
+
+func (cfg *Config) parseDatabase(sectionName string) database {
+	section := cfg.Section(sectionName)
+	return database{
+		User:     section.Key("user").String(),
+		Password: section.Key("password").String(),
+		Host:     section.Key("host").String(),
+		Port:     section.Key("port").String(),
+		Name:     section.Key("name").String(),
+	}
+}
+
+func (cfg *Config) InitProjects() {
+	App.Projects.Service = cfg.parseService("projects.service")
+	App.Projects.DB = cfg.parseDatabase("projects.database")
 }
 
 func (cfg *Config) InitPosts() {
 	postsSection := cfg.Section("posts")
-	App.PostsService.Port = postsSection.Key("port").String()
+	App.PostsService.Host = postsSection.Key("host").String()
+	App.PostsService.HttpPort = postsSection.Key("http_port").String()
+	App.PostsService.GrpcPort = postsSection.Key("grpc_port").String()
 }
 
 func (cfg *Config) InitChats() {
-	chatsSection := cfg.Section("chats")
-	App.ChatsService.Port = chatsSection.Key("port").String()
+	App.Chats.Service = cfg.parseGrpcHttpService("chats.service")
+	App.Chats.DB = cfg.parseDatabase("chats.database")
+}
+
+func (cfg *Config) InitFiles() {
+	filesSection := cfg.Section("files")
+	App.FilesService.Protocol = filesSection.Key("protocol").String()
+	App.FilesService.Host = filesSection.Key("host").String()
+	App.FilesService.Port = filesSection.Key("port").String()
 }
 
 func (cfg *Config) InitPostgres() {

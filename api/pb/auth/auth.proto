@@ -6,6 +6,8 @@ option go_package = "api/pb/auth";
 service Authenticate{
     rpc GenerateJWT (GenerateJWTReq) returns (GenerateJWTResp) {}
     rpc ValidateJWT (ValidateJWTReq) returns (ValidateJWTResp) {}
+    rpc GenerateSignedUrl (GenerateSignedUrlReq) returns (GenerateSignedUrlResp) {}
+    rpc ValidateSignedUrl (ValidateSignedUrlReq) returns (ValidateSignedUrlResp) {}
 }
 
 message GenerateJWTReq{
@@ -31,4 +33,22 @@ message ValidateJWTResp{
 message Error{
     int64 code = 1;
     string message = 2;
+}
+
+message GenerateSignedUrlReq{
+    string fileID = 1;
+}
+
+message GenerateSignedUrlResp{
+    string token = 1;
+    Error err = 2;
+}
+
+message ValidateSignedUrlReq{
+    string token = 1;
+}
+
+message ValidateSignedUrlResp{
+    string fileID = 1;
+    Error err = 2;
 }

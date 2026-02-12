@@ -19,14 +19,20 @@ func (s *server) postComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comments, err := s.service.PostComments(req.Token, req.ParentID)
+	tone, comments, err := s.service.PostComments(req.Token, req.ParentID)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
 	models := slice.MustConvert(comments, commentToModel)
-	writeJSON(w, PostCommentsResp(models))
+	writeJSON(w, PostCommentsResp{
+		Tone: ToneModel{
+			PositivePercentage: tone.Positive(),
+			NegativePercentage: tone.Negative(),
+		},
+		Comments: models,
+	})
 }
 
 func decodeCommentsReq(r *http.Request) (CommentsReq, error) {

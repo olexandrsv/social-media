@@ -20,8 +20,8 @@ func main() {
 	s := service.New(repo, auth)
 	endpoints := endpoint.NewEndpoints(s)
 
-	httpServer := transport.NewHTTPServer(endpoints)
-	grpcServer := transport.NewGRPCServer(endpoints)
+	httpServer := transport.NewHTTPServer(s, endpoints)
+	grpcServer := transport.NewGRPCServer(endpoints, s)
 
 	wg.Add(2)
 	go httpServer.Run(&wg)

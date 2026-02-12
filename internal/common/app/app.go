@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func defaultInit(cfg *config.Config){
+func defaultInit(cfg *config.Config) {
 	cfg.InitAuth()
 	cfg.InitLog()
 	log.Init()
@@ -19,21 +19,33 @@ func InitUsersService() {
 	cfg.InitPostgres()
 }
 
-func InitPostsService(){
+func InitProjectsService() {
+	cfg := config.New()
+	defaultInit(cfg)
+	cfg.InitProjects()
+	cfg.InitPostgres()
+	cfg.InitUsers()
+}
+
+func InitPostsService() {
 	cfg := config.New()
 	defaultInit(cfg)
 	cfg.InitPosts()
+	cfg.InitFiles()
+	cfg.InitUsers()
+	cfg.InitChats()
 	cfg.InitMongo()
 }
 
-func InitChatsService(){
+func InitChatsService() {
 	cfg := config.New()
 	defaultInit(cfg)
 	cfg.InitChats()
+	cfg.InitUsers()
 	cfg.InitPostgres()
 }
 
-func InitAuthService(){
+func InitAuthService() {
 	cfg := config.New()
 	defaultInit(cfg)
 }
@@ -43,7 +55,13 @@ func InitLogService() {
 	cfg.InitLog()
 }
 
-func InitMock(c config.AppConfig, t testing.TB){
+func InitFilesService() {
+	cfg := config.New()
+	defaultInit(cfg)
+	cfg.InitFiles()
+}
+
+func InitMock(c config.AppConfig, t testing.TB) {
 	config.App = c
 	log.InitMock(t)
 }

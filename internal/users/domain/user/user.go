@@ -1,11 +1,8 @@
 package user
 
 import (
-	"context"
-	"social-media/database"
-	"sync"
-
-	"github.com/gorilla/websocket"
+	"social-media/internal/common/app/log"
+	"social-media/internal/common/connection"
 )
 
 type Option func(user *User)
@@ -18,7 +15,7 @@ type User struct {
 	password  string
 	bio       string
 	interests string
-	Conn      *websocket.Conn
+	conn      connection.MessageConnection
 }
 
 func New(id int, login string, opts ...Option) *User {
@@ -52,9 +49,8 @@ func WithPassword(password string) Option {
 	return func(user *User) { user.password = password }
 }
 
-// Register adds current user to active users
-func (u *User) Register() {
-	ActiveUsers.Set(u.id, u)
+func (u *User) SetConn(conn connection.MessageConnection) {
+	u.conn = conn
 }
 
 func (u *User) ID() int {
@@ -85,34 +81,11 @@ func (u *User) Interests() string {
 	return u.interests
 }
 
-func GetIdByLogin(login string) (int, error) {
-	var id int
-	conn := database.PostgreConn
-	err := conn.QueryRow(context.Background(), "select id from users where login=$1", login).Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+func (u *User) SetConnection(conn connection.MessageConnection) {
+	u.conn = conn
 }
 
-var ActiveUsers = userMap{
-	data: make(map[int]*User),
-}
-
-type userMap struct {
-	mux  sync.RWMutex
-	data map[int]*User
-}
-
-func (users *userMap) Get(id int) (*User, bool) {
-	users.mux.RLock()
-	defer users.mux.RUnlock()
-	user, ok := users.data[id]
-	return user, ok
-}
-
-func (users *userMap) Set(id int, user *User) {
-	users.mux.Lock()
-	defer users.mux.Unlock()
-	users.data[id] = user
+func (u *User) Send(data string) error {
+	log.Infof("notification: %v", data)
+	return u.conn.Send([]byte(data))
 }

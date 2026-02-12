@@ -1,48 +1,34 @@
 package server
 
 import (
-	"context"
-	"net"
-	"social-media/api/pb/log"
-	"social-media/internal/common/app/config"
 	"social-media/internal/log/service"
-
-	"google.golang.org/grpc"
+	"sync"
 )
 
 type server struct {
-	srv *grpc.Server
-	log.UnimplementedLogServer
-	service service.Service
+	grpcServer *grpcServer
+	httpServer *httpServer
 }
 
-func NewGRPCServer(service service.Service) *server {
-	s := grpc.NewServer()
-	srv := &server{
-		srv:     s,
-		service: service,
+func NewServer(service service.Service) *server {
+	return &server{
+		grpcServer: newGrpcServer(service),
+		httpServer: newHttpServer(service),
 	}
-	log.RegisterLogServer(s, srv)
-	return srv
-}
-
-func (s *server) Error(ctx context.Context, req *log.LogRequest) (*log.Empty, error) {
-	s.service.Error(req.Msg)
-	return &log.Empty{}, nil
-}
-
-func (s *server) Info(ctx context.Context, req *log.LogRequest) (*log.Empty, error) {
-	s.service.Info(req.Msg)
-	return &log.Empty{}, nil
 }
 
 func (s *server) Run() {
-	listener, err := net.Listen("tcp", ":"+config.App.LogService.Port)
-	if err != nil {
-		panic(err)
-	}
+	var wg sync.WaitGroup
 
-	if err := s.srv.Serve(listener); err != nil {
-		panic(err)
-	}
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		s.httpServer.run()
+	}()
+	go func() {
+		defer wg.Done()
+		s.grpcServer.run()
+	}()
+
+	wg.Wait()
 }

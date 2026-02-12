@@ -2,14 +2,14 @@ package service
 
 import (
 	"social-media/internal/common"
-	"social-media/internal/common/app/log"
 	"social-media/internal/common/files"
 	"social-media/internal/posts/domain/comment"
+	"social-media/internal/posts/domain/tone"
 	"social-media/internal/posts/repository"
 )
 
 type commentsService interface {
-	PostComments(string, string) ([]*comment.Comment, error)
+	PostComments(string, string) (*tone.Tone, []*comment.Comment, error)
 	CreatePostComment(CreatePostCommentReq) (*comment.Comment, error)
 	DeletePostComment(string, string, string) error
 
@@ -20,34 +20,27 @@ type commentsService interface {
 	DeleteCommentComment(string, string, string) error
 }
 
-func (s *postsService) PostComments(token, id string) ([]*comment.Comment, error) {
+func (s *postsService) PostComments(token, id string) (*tone.Tone, []*comment.Comment, error) {
 	_, _, err := s.auth.ValidateToken(token)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	log.Logf("id: %v", id)
 
 	comments, err := s.repo.PostComments(id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	ids := make([]int, 0, len(comments))
-	for _, comment := range comments {
-		ids = append(ids, comment.UserID())
+	if err := addUsersFullNames(s, comments); err != nil {
+		return nil, nil, err
 	}
 
-	fullNames, err := s.users.UsersInfo(ids)
+	tone, err := s.ai.EstimateTone(comments)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	for i, fullName := range fullNames {
-		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
-	}
-
-	return comments, nil
+	return tone, comments, nil
 }
 
 func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, error) {
@@ -56,11 +49,11 @@ func (s *postsService) CreatePostComment(req CreatePostCommentReq) (*comment.Com
 		return nil, err
 	}
 
-	imagesPaths, err := files.Process(req.Images)
+	imagesPaths, err := files.Process("posts", req.Images)
 	if err != nil {
 		return nil, err
 	}
-	filesPaths, err := files.Process(req.Files)
+	filesPaths, err := files.Process("posts", req.Files)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +107,7 @@ func (s *postsService) UpdateComment(req UpdateCommentReq) (*comment.Comment, er
 		return nil, common.ErrForbidden
 	}
 
-	err = comment.Update(req.Text, req.Images, req.Files, req.DeletedImages, req.DeletedFiles)
+	err = comment.Update(req.Text, req.Images, req.Files, "posts", req.DeletedImages, req.DeletedFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -136,19 +129,7 @@ func (s *postsService) CommentComments(token, commentID string) ([]*comment.Comm
 		return nil, err
 	}
 
-	ids := make([]int, 0, len(comments))
-	for _, comment := range comments {
-		ids = append(ids, comment.UserID())
-	}
-
-	fullNames, err := s.users.UsersInfo(ids)
-	if err != nil {
-		return nil, err
-	}
-
-	for i, fullName := range fullNames {
-		comments[i].AddUserFullName(fullName.Name, fullName.Surname)
-	}
+	addUsersFullNames(s, comments)
 
 	return comments, nil
 }
@@ -159,11 +140,11 @@ func (s *postsService) CreateCommentComment(req CreateCommentCommentReq) (*comme
 		return nil, err
 	}
 
-	imagesPaths, err := files.Process(req.Images)
+	imagesPaths, err := files.Process("posts", req.Images)
 	if err != nil {
 		return nil, err
 	}
-	filesPaths, err := files.Process(req.Files)
+	filesPaths, err := files.Process("posts", req.Files)
 	if err != nil {
 		return nil, err
 	}

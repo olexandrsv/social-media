@@ -7,29 +7,36 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
+	"social-media/internal/common/connection"
 	"social-media/internal/users/endpoint"
+	"social-media/internal/users/service"
 	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
 
 	transport "github.com/go-kit/kit/transport/http"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 type httpServer struct {
+	service   service.Service
 	endpoints endpoint.Endpoints
 	router    *mux.Router
 }
 
-func newHTTPServer(e endpoint.Endpoints, r *mux.Router) *httpServer {
-	return &httpServer{e, r}
+func newHTTPServer(service service.Service, e endpoint.Endpoints, r *mux.Router) *httpServer {
+	return &httpServer{
+		service:   service,
+		endpoints: e,
+		router:    r,
+	}
 }
 
-func NewHTTPServer(endpoints endpoint.Endpoints) *httpServer {
+func NewHTTPServer(service service.Service, endpoints endpoint.Endpoints) *httpServer {
 	r := mux.NewRouter()
-	s := newHTTPServer(endpoints, r)
+	s := newHTTPServer(service, endpoints, r)
 
 	r.Methods("POST").Path("/users").Handler(transport.NewServer(
 		endpoints.CreateUser,
@@ -80,20 +87,19 @@ func NewHTTPServer(endpoints endpoint.Endpoints) *httpServer {
 		transport.ServerErrorEncoder(s.encodeError),
 	))
 
+	r.Methods("PUT").Path("/users/posts/{owner_id}/read").HandlerFunc(s.updateReadPosts)
+
+	r.Path("/ws").HandlerFunc(s.upgradeToWS)
+
 	return s
 }
 
 func (s *httpServer) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
-	
-	handler := handlers.CORS(
-		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
-		handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:4200"}),
-		handlers.AllowCredentials(),
-	)(s.router)
 
-	err := http.ListenAndServe(":"+config.App.UsersService.Port, handler)
+	handler := common.CORS(s.router)
+
+	err := http.ListenAndServe(":"+config.App.Users.Service.HttpPort, handler)
 	if err != nil {
 		log.Error(err)
 	}
@@ -115,6 +121,30 @@ func (s *httpServer) encodeResponse(ctx context.Context, w http.ResponseWriter, 
 		return nil
 	}
 	return json.NewEncoder(w).Encode(response)
+}
+
+func (s *httpServer) updateReadPosts(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		common.WriteError(w, common.ErrNoToken)
+		return
+	}
+
+	params := mux.Vars(r)
+	ownerIDParam, ok := params["owner_id"]
+	if !ok {
+		common.WriteError(w, common.ErrInvalidData)
+		return
+	}
+	ownerID, err := strconv.Atoi(ownerIDParam)
+	if err != nil {
+		common.WriteError(w, common.ErrInvalidData)
+		return
+	}
+
+	err = s.service.UpdateReadPosts(token.Value, ownerID, r.FormValue("last_read_post"))
+	common.WriteResponse(w, nil, err)
 }
 
 func (s *httpServer) decodeCreateUserReq(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -216,7 +246,7 @@ func (s *httpServer) decodeFollowUserReq(_ context.Context, r *http.Request) (in
 
 	return endpoint.FollowUserReq{
 		Token: token.Value,
-		ID: id,
+		ID:    id,
 	}, nil
 }
 
@@ -229,4 +259,104 @@ func (s *httpServer) decodeGetFollowedUsersReq(_ context.Context, r *http.Reques
 	return endpoint.TokenReq{
 		Token: token.Value,
 	}, nil
+}
+
+func (s *httpServer) upgradeToWS(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("token")
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		writeError(w, common.ErrNoToken)
+		return
+	}
+
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		writeError(w, common.ErrInternal)
+		return
+	}
+
+	_ = conn
+	_ = token
+
+	s.service.SetUserConnection(token.Value, connection.NewGRPC(conn))
+	//s.handleWebSocketConn(w, token.Value, conn)
+}
+
+func (s *httpServer) handleWebSocketConn(w http.ResponseWriter, token string, conn *websocket.Conn) {
+	for {
+		_, p, err := conn.ReadMessage()
+		if err != nil {
+			conn.Close()
+			log.Error(errors.WithStack(err))
+			writeError(w, common.ErrInternal)
+			return
+		}
+
+		log.Info("Received message: " + string(p))
+
+		var t Notification
+		if err := json.Unmarshal(p, &t); err != nil {
+			log.Error(errors.WithStack(err))
+			return
+		}
+
+		switch t.Type {
+		case Message:
+			var msg ReadMessagesNotification
+			if err := json.Unmarshal(p, &msg); err != nil {
+				log.Error(errors.WithStack(err))
+				return
+			}
+			//s.service.UpdateReadMessages(token, msg.ChatID, msg.LastReadMessageID)
+		case Post:
+			var post ReadPostsNotification
+			if err := json.Unmarshal(p, &post); err != nil {
+				log.Error(errors.WithStack(err))
+				return
+			}
+			//s.service.UpdateReadPosts(token, post.OwnerID, post.LastReadPostID)
+		}
+
+		//s.service.UpdateReadMessages(token, msg)
+	}
+}
+
+func writeResponse(w http.ResponseWriter, resp interface{}, err error) {
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, resp)
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	code := 500
+	msg := "Internal server error"
+	if e, ok := err.(common.Error); ok {
+		code = e.Code()
+		msg = e.Message()
+	}
+	w.WriteHeader(code)
+
+	_, err = w.Write([]byte(msg))
+	if err != nil {
+		log.Error(errors.WithStack(err))
+	}
+}
+
+func writeJSON(w http.ResponseWriter, resp interface{}) {
+	w.WriteHeader(200)
+	err := json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+	}
 }

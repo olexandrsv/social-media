@@ -22,7 +22,7 @@ const (
 	Deleted
 )
 
-func Remained(resources, deletedResources []string) ([]string, error) {
+func Remained(resources, deletedResources []string) (remainedResources []string, finalErr error) {
 	resourcesSate := make(map[string]resourceLifecycle)
 
 	for i := 0; i < len(resources); i++ {
@@ -33,25 +33,24 @@ func Remained(resources, deletedResources []string) ([]string, error) {
 		deletedResource := deletedResources[i]
 		_, ok := resourcesSate[deletedResource]
 		if !ok {
-			log.Error(errors.Errorf("attempt to update file from another post: %+v", deletedResource))
-			return nil, common.ErrInvalidData
+			finalErr = common.ErrInvalidData
+			return
 		}
 		resourcesSate[deletedResource] = Deleted
 	}
 
-	remainedResources := make([]string, 0)
 	for resource, state := range resourcesSate {
 		if state == Created {
 			remainedResources = append(remainedResources, resource)
 		}
 	}
-	return remainedResources, nil
+	return
 }
 
-func Process(files []*multipart.FileHeader) ([]string, error) {
+func Process(folder string, files []*multipart.FileHeader) ([]string, error) {
 	filesNames := []string{}
 	for _, file := range files {
-		filename, err := processFile(file)
+		filename, err := processFile(folder, file)
 		if err != nil {
 			return nil, err
 		}
@@ -60,24 +59,35 @@ func Process(files []*multipart.FileHeader) ([]string, error) {
 	return filesNames, nil
 }
 
-func Delete(files []string) error {
+func Get(folder, fileID string) (*os.File, error){
+	path := "./upload/"+folder+"/"+fileID
+	file, err := os.Open(path)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+
+	return file, nil
+}
+
+func Delete(folder string, files []string) error {
 	for _, file := range files {
-		if err := removeFile(file); err != nil {
+		if err := removeFile(folder, file); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func processFile(file *multipart.FileHeader) (string, error) {
+func processFile(folder string, file *multipart.FileHeader) (string, error) {
 	extension := filepath.Ext(file.Filename)
-	id, err := uuid.NewUUID()
+	id, err := uuid.NewRandom()
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return "", common.ErrInternal
 	}
 	filename := id.String() + extension
-	path := "./upload/" + filename
+	path := "./upload/"+ folder+ "/" + filename
 	if err := save(file, path); err != nil {
 		return "", err
 	}
@@ -94,6 +104,13 @@ func save(fileHeader *multipart.FileHeader, path string) error {
 		return common.ErrInvalidData
 	}
 	defer file.Close()
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
 	newFile, err := os.Create(path)
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -108,11 +125,11 @@ func save(fileHeader *multipart.FileHeader, path string) error {
 	return nil
 }
 
-func removeFile(filename string) error {
+func removeFile(folder, filename string) error {
 	mx.Lock()
 	defer mx.Unlock()
 
-	path := "./upload/" + filename
+	path := "./upload/"+ folder+ "/" + filename
 	if err := os.Remove(path); err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal

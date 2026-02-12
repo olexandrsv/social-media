@@ -70,3 +70,24 @@ type CreateChatMessageReq struct {
 type UpdateChatMessageModel struct {
 	UpdateMessageModel `bson:",inline"`
 }
+
+type ReadMessageModel struct {
+	UserID    int    `bson:"userId"`
+	ChatID    int    `bson:"chatId"`
+	MessageID string `bson:"messageId"`
+}
+
+type LastReadPost struct {
+	FollowingID    int
+	LastReadPostID string
+}
+
+type MissedPostsNumber struct {
+	FollowingID int `bson:"_id"`
+	Number      int `bson:"number"`
+}
+
+type MissedMessagesNumber struct {
+	ChatID int `bson:"_id"`
+	Number int `bson:"number"`
+}

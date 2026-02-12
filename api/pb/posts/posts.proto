@@ -1,0 +1,32 @@
+syntax="proto3";
+
+package posts;
+option go_package="api/pb/posts";
+
+service Posts{
+    rpc MissedPostsNumber(MissedPostsNumberReq) returns (MissedPostsNumberResp) {}
+}
+
+message MissedPostsNumberReq{
+    repeated LastReadPost lastReadPosts = 1;
+}
+
+message LastReadPost {
+    int64 followingID = 1;   
+	string lastReadPostID = 2;
+}
+
+message MissedPostsNumberResp{
+    repeated MissedPostsNumber missedPostsNumbers = 1;
+    Error err = 2;
+}
+
+message MissedPostsNumber {
+    int64 followingID = 1;
+	int64 number = 2;
+}
+
+message Error{
+    int64 code = 1;
+    string message = 2;
+}

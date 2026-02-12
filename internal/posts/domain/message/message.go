@@ -6,6 +6,18 @@ import (
 	"social-media/internal/posts/domain/user"
 )
 
+type MessageI interface {
+	ID() string
+	UserID() int
+	UserName() string
+	UserSurname() string
+	Text() string
+	ImagesPaths() []string
+	FilesPaths() []string
+	AddUserFullName(name, surname string)
+	Update(text string, newImages, newFiles []*multipart.FileHeader, filesFolder string, deletedImages, deletedFiles []string) error
+}
+
 type Message struct {
 	id          string
 	user        *user.User
@@ -52,17 +64,21 @@ func (m *Message) FilesPaths() []string {
 	return m.filesPaths
 }
 
-func (m *Message) AddUserFullName(name, surname string){
+func (m *Message) SetImagesPaths(paths []string) {
+	m.imagesPaths = paths
+}
+
+func (m *Message) AddUserFullName(name, surname string) {
 	m.user.AddFullName(name, surname)
 }
 
-func (m *Message) Update(text string, newImages, newFiles []*multipart.FileHeader, deletedImages, deletedFiles []string) error {
+func (m *Message) Update(text string, newImages, newFiles []*multipart.FileHeader, filesFolder string, deletedImages, deletedFiles []string) error {
 	m.text = text
-	addedImages, err := files.Process(newImages)
+	addedImages, err := files.Process(filesFolder, newImages)
 	if err != nil {
 		return err
 	}
-	addedFiles, err := files.Process(newFiles)
+	addedFiles, err := files.Process(filesFolder, newFiles)
 	if err != nil {
 		return err
 	}
@@ -76,10 +92,10 @@ func (m *Message) Update(text string, newImages, newFiles []*multipart.FileHeade
 		return err
 	}
 
-	if err := files.Delete(deletedImages); err != nil {
+	if err := files.Delete(filesFolder, deletedImages); err != nil {
 		return err
 	}
-	if err := files.Delete(deletedFiles); err != nil {
+	if err := files.Delete(filesFolder, deletedFiles); err != nil {
 		return err
 	}
 

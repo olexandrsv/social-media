@@ -18,7 +18,9 @@ type Logger interface {
 var logger Logger
 
 func Init() {
-	conn, err := grpc.Dial(":"+config.App.LogService.Port, grpc.WithInsecure())
+	host := config.App.LogService.Host
+	port := config.App.LogService.GrpcPort
+	conn, err := grpc.Dial(host+":"+port, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -34,14 +36,20 @@ func InitMock(t testing.TB) {
 }
 
 func Error(err error) {
+	fmt.Printf("%+v\n", err)
 	logger.Error(err)
 }
 
-func Info(msg string){
+func Info(msg string) {
+	fmt.Println(msg)
 	logger.Info(msg)
 }
 
-func Logf(format string, a ...any){
+func Infof(pattern string, args ...any) {
+	Info(fmt.Sprintf(pattern, args...))
+}
+
+func Logf(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
 	Info(msg)
 }

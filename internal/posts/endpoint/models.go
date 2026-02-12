@@ -80,6 +80,10 @@ type GetPostCommentsReq struct {
 	PostID string
 }
 
+type GetPostCommentsResp struct{
+	
+}
+
 type CommentModel struct {
 	MessageModel
 }

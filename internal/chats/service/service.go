@@ -7,6 +7,7 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/clients"
 	"social-media/internal/common/slice"
+	"social-media/internal/posts/domain/chatmessage"
 )
 
 type Service interface {
@@ -15,6 +16,8 @@ type Service interface {
 	Chat(string, int) (*chat.Chat, error)
 	UpdateChat(UpdateChatReq) error
 	DeleteChat(string, int) error
+	UpdateReadMessages(string, int, string) error
+	LastReadMessages(int) ([]*chatmessage.ChatMessage, error)
 }
 
 type service struct {
@@ -120,4 +123,17 @@ func (s *service) DeleteChat(token string, chatID int) error {
 	}
 
 	return s.repo.DeleteChat(chatID)
+}
+
+func (s *service) UpdateReadMessages(token string, chatID int, lastReadMessageID string) error {
+	id, _, err := s.auth.ValidateToken(token)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdateReadMessages(chatID, id, lastReadMessageID)
+}
+
+func (s *service) LastReadMessages(userID int) ([]*chatmessage.ChatMessage, error) {
+	return s.repo.LastReadMessages(userID)
 }

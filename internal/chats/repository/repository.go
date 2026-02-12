@@ -11,6 +11,7 @@ import (
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
 	"social-media/internal/common/slice"
+	"social-media/internal/posts/domain/chatmessage"
 	"strconv"
 
 	_ "github.com/lib/pq"
@@ -24,6 +25,8 @@ type Repository interface {
 	UpdateChat(*chat.Chat) error
 	ChatOwner(int) (int, error)
 	DeleteChat(int) error
+	UpdateReadMessages(int, int, string) error
+	LastReadMessages(int) ([]*chatmessage.ChatMessage, error)
 }
 
 type repo struct {
@@ -31,11 +34,11 @@ type repo struct {
 }
 
 func New() Repository {
-	user := config.App.PostgresDB.User
-	password := config.App.PostgresDB.Password
-	host := config.App.PostgresDB.Host
-	port := config.App.PostgresDB.Port
-	name := config.App.PostgresDB.Name
+	user := config.App.Chats.DB.User
+	password := config.App.Chats.DB.Password
+	host := config.App.Chats.DB.Host
+	port := config.App.Chats.DB.Port
+	name := config.App.Chats.DB.Name
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
 	db, err := sql.Open("postgres", url)
 	if err != nil {
@@ -179,7 +182,7 @@ func (r *repo) createChat(tx *sql.Tx, name string, ownerID int) (int, error) {
 
 func (r *repo) addChatUsers(tx *sql.Tx, chatID int, usersIDs []int) error {
 	var b bytes.Buffer
-	b.WriteString(`INSERT INTO chats_users (chat_id, user_id) VALUES `)
+	b.WriteString(`INSERT INTO chats_users (chat_id, user_id, last_read_message) VALUES `)
 	rawChatID := strconv.Itoa(chatID)
 	for i, userID := range usersIDs {
 		if i != 0 {
@@ -189,6 +192,8 @@ func (r *repo) addChatUsers(tx *sql.Tx, chatID int, usersIDs []int) error {
 		b.WriteString(rawChatID)
 		b.WriteString(",")
 		b.WriteString(strconv.Itoa(userID))
+		b.WriteString(",")
+		b.WriteString("''")
 		b.WriteString(")")
 	}
 
@@ -333,4 +338,39 @@ func (r *repo) deleteChat(tx *sql.Tx, id int) error {
 	}
 
 	return nil
+}
+
+func (r *repo) UpdateReadMessages(chatID, userID int, messageID string) error {
+	query := `UPDATE chats_users SET last_read_message=$1 WHERE chat_id=$2 AND user_id=$3`
+	_, err := r.db.Exec(query, messageID, chatID, userID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func (r *repo) LastReadMessages(userID int) ([]*chatmessage.ChatMessage, error) {
+	query := `SELECT chat_id, last_read_message FROM chats_users WHERE user_id=$1`
+	rows, err := r.db.Query(query, userID)
+	if err == sql.ErrNoRows {
+		return nil, common.ErrNotFound
+	}
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+
+	var messages []*chatmessage.ChatMessage
+	for rows.Next() {
+		var m MessageModel
+		if err := rows.Scan(&m.ChatID, &m.ID); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		messages = append(messages, chatmessage.New(m.ID, 0, "", nil, nil, m.ChatID))
+	}
+
+	return messages, nil
 }

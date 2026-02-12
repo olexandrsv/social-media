@@ -2,3 +2,9 @@
 *.exe
 /upload/*
 *_test.go
+*.crt
+*.key
+*.keras
+**/__pycache__
+**/.venv
+**/log.txt

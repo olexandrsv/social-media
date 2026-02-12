@@ -7,6 +7,8 @@ import (
 	"social-media/internal/common"
 	"social-media/internal/common/app/config"
 	"social-media/internal/common/app/log"
+
+	"social-media/internal/users/domain/post"
 	"social-media/internal/users/domain/user"
 	"strconv"
 
@@ -26,6 +28,9 @@ type Repository interface {
 	Subscribe(int, int) error
 	GetFollowedUsers(int) ([]*user.User, error)
 	UsersInfo([]int) ([]*user.User, error)
+	UpdateReadPosts(int, int, string) error
+	LastReadPosts(int) ([]*post.Post, error)
+	GetFollowers(int) ([]*user.User, error)
 }
 
 type repo struct {
@@ -33,12 +38,13 @@ type repo struct {
 }
 
 func New() Repository {
-	user := config.App.PostgresDB.User
-	password := config.App.PostgresDB.Password
-	host := config.App.PostgresDB.Host
-	port := config.App.PostgresDB.Port
-	name := config.App.PostgresDB.Name
+	user := config.App.Users.DB.User
+	password := config.App.Users.DB.Password
+	host := config.App.Users.DB.Host
+	port := config.App.Users.DB.Port
+	name := config.App.Users.DB.Name
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
+	log.Infof("URL: %s", url)
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		log.Error(err)
@@ -147,25 +153,25 @@ func (r *repo) GetUsersByInfo(info string) ([]*user.User, error) {
 	return users, nil
 }
 
-func (r *repo) SubscriptionExists(userID, followedID int) (bool, error){
+func (r *repo) SubscriptionExists(userID, followedID int) (bool, error) {
 	query := `select count(user_id) from followers where user_id=$1 and follower_id=$2`
 	row := r.db.QueryRow(query, followedID, userID)
 
 	var count int
-	if err := row.Scan(&count); err != nil{
+	if err := row.Scan(&count); err != nil {
 		log.Error(errors.WithStack(err))
 		return false, common.ErrInternal
 	}
 
-	if count == 0{
+	if count == 0 {
 		return false, nil
 	}
 	return true, nil
 }
 
 func (r *repo) Subscribe(userID, followedID int) error {
-	query := `insert into followers (read, user_id, follower_id) values ($1, $2, $3)`
-	_, err := r.db.Exec(query, 0, followedID, userID)
+	query := `insert into followers (last_read_post, user_id, follower_id) values ($1, $2, $3)`
+	_, err := r.db.Exec(query, "", followedID, userID)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return common.ErrInternal
@@ -198,7 +204,10 @@ func (r *repo) GetFollowedUsers(id int) ([]*user.User, error) {
 	return users, nil
 }
 
-func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
+func (r *repo) UsersInfo(ids []int) ([]*user.User, error) {
+	if len(ids) == 0 {
+		return []*user.User{}, nil
+	}
 	var b bytes.Buffer
 	for i, id := range ids {
 		if i != 0 {
@@ -208,7 +217,7 @@ func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 		b.WriteString("(")
 		b.WriteString(v)
 		b.WriteString(",")
-		b.WriteString(strconv.Itoa(i+1))
+		b.WriteString(strconv.Itoa(i + 1))
 		b.WriteString(")")
 	}
 	b.WriteString(";")
@@ -217,12 +226,11 @@ func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 		user_id INTEGER,
 		idx INTEGER
 	);`
-	insert := `INSERT INTO users_data (user_id, idx) VALUES `+b.String()
+	insert := `INSERT INTO users_data (user_id, idx) VALUES ` + b.String()
 	get := `SELECT id, login, first_name, second_name FROM users_data LEFT JOIN users ON users_data.user_id = users.id ORDER BY users_data.idx;`
 	dropTable := `DROP TABLE users_data;`
 
-	query := createTable+insert+get+dropTable
-	log.Info(query)
+	query := createTable + insert + get + dropTable
 
 	rows, err := r.db.Query(query)
 	if err == sql.ErrNoRows {
@@ -243,51 +251,58 @@ func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
 		users = append(users, u)
 	}
 
-	log.Logf("users: %+v", users)
-
 	return users, nil
 }
 
-// func (r *repo) UsersInfo(ids []int) ([]*user.User, error){
-// 	var b bytes.Buffer
-// 	var caseBuffer bytes.Buffer
-// 	for i, id := range ids {
-// 		if i != 0 {
-// 			b.WriteString(", ")
-// 		}
-// 		v := strconv.Itoa(id)
-// 		b.WriteString(v)
-// 		caseBuffer.WriteString(" when ")
-// 		caseBuffer.WriteString(v)
-// 		caseBuffer.WriteString(" then ")
-// 		caseBuffer.WriteString(strconv.Itoa(i+1))
-// 	}
-// 	caseBuffer.WriteString(" end;")
+func (r *repo) UpdateReadPosts(ownerID, userID int, messageID string) error {
+	query := `UPDATE followers SET last_read_post=$1 WHERE user_id=$2 AND follower_id=$3`
+	_, err := r.db.Exec(query, messageID, ownerID, userID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
 
-// 	query := fmt.Sprintf("select id, login, first_name, second_name from users where id in (%s) order by case id %s", 
-// 		b.String(), caseBuffer.String())
-// 	log.Info(query)
+	return nil
+}
 
-// 	rows, err := r.db.Query(query)
-// 	if err == sql.ErrNoRows {
-// 		return nil, common.ErrNotFound
-// 	}
-// 	if err != nil {
-// 		log.Error(errors.WithStack(err))
-// 		return nil, common.ErrInternal
-// 	}
+func (r *repo) LastReadPosts(userID int) ([]*post.Post, error) {
+	query := `SELECT user_id, last_read_post FROM followers WHERE follower_id=$1`
+	rows, err := r.db.Query(query, userID)
+	if err == sql.ErrNoRows {
+		return nil, common.ErrNotFound
+	}
 
-// 	users := make([]*user.User, 0, len(ids))
-// 	for rows.Next() {
-// 		var model UserModel
-// 		if err := rows.Scan(&model.ID, &model.Login, &model.Name, &model.Surname); err != nil {
-// 			return nil, err
-// 		}
-// 		u := user.New(model.ID, model.Login, user.WithName(model.Name), user.WithSurname(model.Surname))
-// 		users = append(users, u)
-// 	}
+	var posts []*post.Post
+	for rows.Next() {
+		var p PostModel
+		if err := rows.Scan(&p.UserID, &p.ID); err != nil {
+			return nil, common.ErrInternal
+		}
+		posts = append(posts, post.NewPost(p.ID, p.UserID))
+	}
+	return posts, nil
+}
 
-// 	log.Logf("users: %+v", users)
+func (r *repo) GetFollowers(userID int) ([]*user.User, error) {
+	query := `SELECT follower_id FROM followers WHERE user_id=$1`
+	rows, err := r.db.Query(query, userID)
+	if err == sql.ErrNoRows {
+		return []*user.User{}, nil
+	}
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
 
-// 	return users, nil
-// }
+	var users []*user.User
+	for rows.Next() {
+		var u UserModel
+		if err = rows.Scan(&u.ID); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		users = append(users, user.New(u.ID, ""))
+	}
+
+	return users, nil
+}

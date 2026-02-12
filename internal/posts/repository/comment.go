@@ -101,7 +101,7 @@ func (r *repo) CreatePostComment(req CreatePostCommentReq) (*comment.Comment, er
 	if err != nil {
 		return nil, err
 	}
-	err = r.addPostChild(req.PostID, comment.ID())
+	err = addChild(r.posts, req.PostID, comment.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (r *repo) CreateCommentComment(req CreateCommentCommentReq) (*comment.Comme
 	if err != nil {
 		return nil, err
 	}
-	err = r.addCommentChild(req.CommentID, comment.ID())
+	err = addChild(r.comments, req.CommentID, comment.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -280,6 +280,58 @@ func (r *repo) deletePostChild(ctx context.Context, parentID, commentID string) 
 	}
 
 	_, err = r.posts.UpdateByID(ctx, objectID, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return err
+	}
+	return nil
+}
+
+func mongoTransaction(client *mongo.Client, fns ...func()error) error{
+	session, err := client.StartSession()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	defer session.EndSession(context.Background())
+
+	_, err = session.WithTransaction(context.Background(), func(sessCtx mongo.SessionContext) (interface{}, error) {
+		for _, fn := range fns {
+			if err := fn(); err != nil {
+				if err := session.AbortTransaction(sessCtx); err != nil {
+					log.Error(errors.WithStack(err))
+				}
+				return nil, err
+			}
+		}
+		
+		if err := session.CommitTransaction(sessCtx); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		return nil, nil
+	})
+	if err != nil {
+		return common.ErrInternal
+	}
+
+	return nil
+}
+
+func deleteChild(ctx context.Context, coll *mongo.Collection, parentID, commentID string) error {
+	update := bson.M{
+		"$pull": bson.M{
+			"comments": commentID,
+		},
+	}
+
+	objectID, err := primitive.ObjectIDFromHex(parentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+
+	_, err = coll.UpdateByID(ctx, objectID, update)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return err

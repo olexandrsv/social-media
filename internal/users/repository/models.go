@@ -18,3 +18,13 @@ func NewUserModel(login, name, surname, password string) UserModel {
 		Password: password,
 	}
 }
+
+type PostModel struct {
+	ID     string
+	UserID int
+}
+
+type MessageModel struct {
+	ID     string
+	ChatID int
+}

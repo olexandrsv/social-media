@@ -12,3 +12,8 @@ type CreateChatReq struct {
 	OwnerID  int
 	UsersIDs []int
 }
+
+type MessageModel struct {
+	ID     string
+	ChatID int
+}

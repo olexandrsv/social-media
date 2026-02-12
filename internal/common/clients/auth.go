@@ -14,14 +14,18 @@ import (
 type AuthClient interface {
 	GenerateToken(int, string) (string, error)
 	ValidateToken(string) (int, string, error)
+	GenerateSignedUrl(string) (string, error)
+	ValidateSignedUrl(string) (string, error)
 }
 
 type client struct {
-	auth.AuthenticateClient
+	c auth.AuthenticateClient
 }
 
 func NewAuthClient() AuthClient {
-	conn, err := grpc.Dial(":"+config.App.AuthService.Port, grpc.WithInsecure())
+	host := config.App.AuthService.Host
+	port := config.App.AuthService.Port
+	conn, err := grpc.Dial(host+":"+port, grpc.WithInsecure())
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		panic(err)
@@ -32,7 +36,7 @@ func NewAuthClient() AuthClient {
 }
 
 func (c client) GenerateToken(id int, login string) (string, error) {
-	resp, err := c.GenerateJWT(context.Background(), &auth.GenerateJWTReq{Id: int64(id), Login: login})
+	resp, err := c.c.GenerateJWT(context.Background(), &auth.GenerateJWTReq{Id: int64(id), Login: login})
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return "", common.ErrInternal
@@ -44,7 +48,7 @@ func (c client) GenerateToken(id int, login string) (string, error) {
 }
 
 func (c client) ValidateToken(token string) (int, string, error) {
-	resp, err := c.ValidateJWT(context.Background(), &auth.ValidateJWTReq{Token: token})
+	resp, err := c.c.ValidateJWT(context.Background(), &auth.ValidateJWTReq{Token: token})
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return 0, "", common.ErrInternal
@@ -53,4 +57,32 @@ func (c client) ValidateToken(token string) (int, string, error) {
 		return 0, "", common.NewError(int(resp.Err.Code), resp.Err.Message)
 	}
 	return int(resp.Id), resp.Login, nil
+}
+
+func (c client) GenerateSignedUrl(fileID string) (string, error) {
+	resp, err := c.c.GenerateSignedUrl(context.Background(), &auth.GenerateSignedUrlReq{
+		FileID: fileID,
+	})
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return "", common.ErrInternal
+	}
+	if resp.Err != nil {
+		return "", common.NewError(int(resp.Err.Code), resp.Err.Message)
+	}
+
+	return resp.Token, nil
+}
+
+func (c client) ValidateSignedUrl(token string) (string, error) {
+	resp, err := c.c.ValidateSignedUrl(context.Background(), &auth.ValidateSignedUrlReq{Token: token})
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return "", common.ErrInternal
+	}
+	if resp.Err != nil {
+		return "", common.NewError(int(resp.Err.Code), resp.Err.Message)
+	}
+
+	return resp.FileID, nil
 }

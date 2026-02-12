@@ -22,26 +22,29 @@ type Repository interface {
 	UpdatePost(*post.Post) error
 	GetPost(string) (*post.Post, error)
 	DeletePost(string) error
+	MissedPostsNumber([]*post.LastRead) ([]*post.MissedNumber, error)
 	commentRepository
 	chatMessageRepository
 }
 
 type repo struct {
-	Client   *mongo.Client
-	DB       *mongo.Database
-	posts    *mongo.Collection
-	comments *mongo.Collection
-	messages *mongo.Collection
+	Client       *mongo.Client
+	DB           *mongo.Database
+	posts        *mongo.Collection
+	comments     *mongo.Collection
+	messages     *mongo.Collection
+	readMessages *mongo.Collection
 }
 
 func New() Repository {
-	user := config.App.MongoDB.User
-	password := config.App.MongoDB.Password
+	//user := config.App.MongoDB.User
+	//password := config.App.MongoDB.Password
 	host := config.App.MongoDB.Host
 	port := config.App.MongoDB.Port
 	databaseName := config.App.MongoDB.Name
 
-	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s/?authSource=admin&replicaSet=rs1", user, password, host, port, databaseName)
+	// mongodb://mongo_adiutor:27017/?replicaSet=rs1&directConnection=true
+	url := fmt.Sprintf("mongodb://%s:%s/%s/?replicaSet=rs1", host, port, databaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -59,11 +62,12 @@ func New() Repository {
 	db := client.Database(databaseName)
 
 	return &repo{
-		Client:   client,
-		DB:       db,
-		posts:    db.Collection("posts"),
-		comments: db.Collection("comments"),
-		messages: db.Collection("messages"),
+		Client:       client,
+		DB:           db,
+		posts:        db.Collection("posts"),
+		comments:     db.Collection("comments"),
+		messages:     db.Collection("messages"),
+		readMessages: db.Collection("read_messages"),
 	}
 }
 
@@ -283,6 +287,80 @@ func (r *repo) addPostChild(postID, commentID string) error {
 	return nil
 }
 
+func addChild(coll *mongo.Collection, parentID, commentID string) error {
+	objectID, err := primitive.ObjectIDFromHex(parentID)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInvalidData
+	}
+
+	update := bson.M{
+		"$push": bson.M{
+			"comments": commentID,
+		},
+	}
+
+	_, err = coll.UpdateByID(context.Background(), objectID, update)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return common.ErrInternal
+	}
+	return nil
+}
+
 func hexFromObjectID(i interface{}) string {
 	return i.(primitive.ObjectID).Hex()
+}
+
+func (r *repo) MissedPostsNumber(lastReadPosts []*post.LastRead) ([]*post.MissedNumber, error) {
+	if len(lastReadPosts) == 0 {
+		return make([]*post.MissedNumber, 0), nil
+	}
+	var orConditions []bson.M
+	for _, item := range lastReadPosts {
+		var objectID primitive.ObjectID
+		if item.LastReadPostID() == "" {
+			objectID = primitive.NilObjectID
+		} else {
+			id, err := primitive.ObjectIDFromHex(item.LastReadPostID())
+			if err != nil {
+				log.Error(errors.WithStack(err))
+				return nil, common.ErrInternal
+			}
+			objectID = id
+		}
+		orConditions = append(orConditions, bson.M{
+			"userId": item.FollowingID(),
+			"_id":    bson.M{"$gt": objectID},
+		})
+	}
+
+	pipeline := mongo.Pipeline{
+		{{"$match", bson.M{"$or": orConditions}}},
+		{{"$group", bson.M{
+			"_id":    "$userId",
+			"number": bson.M{"$sum": 1},
+			"ids":    bson.M{"$push": "$_id"},
+		}}},
+	}
+
+	cursor, err := r.posts.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return nil, common.ErrInternal
+	}
+
+	var missedPostsNumbers []*post.MissedNumber
+	for cursor.Next(context.Background()) {
+		var missedPostsNumber MissedPostsNumber
+		if err := cursor.Decode(&missedPostsNumber); err != nil {
+			log.Error(errors.WithStack(err))
+			return nil, common.ErrInternal
+		}
+		missedPostNumber := post.NewMissedNumber(missedPostsNumber.FollowingID, missedPostsNumber.Number)
+		log.Infof("missedPost{ followingID: %d, number: %d }", missedPostsNumber.FollowingID, missedPostsNumber.Number)
+		missedPostsNumbers = append(missedPostsNumbers, missedPostNumber)
+	}
+
+	return missedPostsNumbers, nil
 }

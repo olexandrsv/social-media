@@ -5,6 +5,9 @@ option go_package = "api/pb/users";
 
 service Users{
     rpc UsersInfo (UsersInfoReq) returns (UsersInfoResp) {}
+    rpc LastReadPosts (LastReadPostsReq) returns (LastReadPostsResp) {}
+    rpc SendPostNotification(SendPostNotificationReq) returns (SendPostNotificationResp) {}
+    rpc SendNotification(SendNotificationReq) returns (SendNotificationResp) {}
 }
 
 message UsersInfoReq{
@@ -25,4 +28,37 @@ message Info {
 message Error{
     int64 code = 1;
     string message = 2;
+}
+
+message LastReadPostsResp{
+    repeated Post posts = 1;
+    Error err = 2;
+}
+
+message Post{
+    string id = 1;
+    int64 userID = 2;
+}
+
+message LastReadPostsReq{
+    int64 userID = 1;
+}
+
+message SendPostNotificationReq{
+    int64 senderID = 1;
+    string message = 2;
+}
+
+message SendPostNotificationResp {
+    Error err = 1;
+}
+
+message SendNotificationReq{
+    int64 senderID = 1;
+    repeated int64 receiversIDs = 2;
+    string message = 3;
+}
+
+message SendNotificationResp{
+    Error err = 1;
 }

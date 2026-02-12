@@ -1,0 +1,4 @@
+**/.angular
+**/dist
+**/node-modules
+**/.venv

@@ -4,49 +4,23 @@ import (
 	"mime/multipart"
 	"social-media/internal/posts/domain/chatmessage"
 	"social-media/internal/posts/domain/comment"
-	"social-media/internal/posts/domain/message"
-	"social-media/internal/posts/domain/post"
+	"social-media/internal/posts/models"
 )
 
-type CreatePostResp PostModel
+type CreatePostResp models.PostModel
 
-type UpdatePostResp PostModel
+type UpdatePostResp models.PostModel
 
-type GetPostsResp []PostModel
+type GetPostsResp []models.PostModel
 
-type PostCommentsResp []CommentModel
+type PostCommentsResp struct {
+	Tone     ToneModel      `json:"tone"`
+	Comments []CommentModel `json:"comments"`
+}
 
 type CommentsReq struct {
 	Token    string
 	ParentID string
-}
-
-type User struct {
-	ID      int    `json:"user_id"`
-	Name    string `json:"user_name"`
-	Surname string `json:"user_surname"`
-}
-
-type MessageModel struct {
-	ID string `json:"id"`
-	User
-	Text        string   `json:"text"`
-	FilesPaths  []string `json:"files"`
-	ImagesPaths []string `json:"images"`
-}
-
-func messageToModel(m *message.Message) MessageModel {
-	return MessageModel{
-		ID: m.ID(),
-		User: User{
-			ID:      m.UserID(),
-			Name:    m.UserName(),
-			Surname: m.UserSurname(),
-		},
-		Text:        m.Text(),
-		ImagesPaths: m.ImagesPaths(),
-		FilesPaths:  m.FilesPaths(),
-	}
 }
 
 type CreateMessageReq struct {
@@ -63,16 +37,6 @@ type UpdateMessageReq struct {
 	Images        []*multipart.FileHeader
 	DeletedFiles  []string
 	DeletedImages []string
-}
-
-type PostModel struct {
-	MessageModel
-}
-
-func postToModel(p *post.Post) PostModel {
-	return PostModel{
-		MessageModel: messageToModel(p.Message),
-	}
 }
 
 type GetPostsRequest struct {
@@ -99,13 +63,18 @@ type GetPostCommentsReq struct {
 	PostID string
 }
 
+type ToneModel struct {
+	PositivePercentage float64 `json:"positive_percentage"`
+	NegativePercentage float64 `json:"negative_percentage"`
+}
+
 type CommentModel struct {
-	MessageModel
+	models.MessageModel
 }
 
 func commentToModel(c *comment.Comment) CommentModel {
 	return CommentModel{
-		MessageModel: messageToModel(c.Message),
+		MessageModel: models.MessageToModel(c.Message),
 	}
 }
 
@@ -151,13 +120,23 @@ type Token struct {
 }
 
 type ChatMessageModel struct {
-	MessageModel
+	models.MessageModel
 	ChatID int `json:"chat_id"`
 }
 
 func chatMessageToModel(m *chatmessage.ChatMessage) ChatMessageModel {
 	return ChatMessageModel{
-		MessageModel: messageToModel(m.Message),
-		ChatID: m.ChatID(),
+		MessageModel: models.MessageToModel(m.Message),
+		ChatID:       m.ChatID(),
 	}
+}
+
+type MissedPostsNumber struct {
+	FollowingID int `json:"following_id"`
+	Number      int `json:"number"`
+}
+
+type MissedMessagesNumber struct {
+	ChatID int `json:"chat_id"`
+	Number int `json:"number"`
 }

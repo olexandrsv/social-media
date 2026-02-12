@@ -3,6 +3,7 @@ package main
 import (
 	"social-media/internal/common/app"
 	"social-media/internal/common/clients"
+	"social-media/internal/posts/domain/comment"
 	"social-media/internal/posts/endpoint"
 	"social-media/internal/posts/repository"
 	"social-media/internal/posts/service"
@@ -15,8 +16,10 @@ func main() {
 	repo := repository.New()
 	auth := clients.NewAuthClient()
 	users := clients.NewUsersClient()
+	chats := clients.NewChatsClient()
+	ai := clients.NewAIClient[*comment.Comment]()
 
-	s := service.New(repo, auth, users)
+	s := service.New(repo, auth, users, chats, ai)
 	e := endpoint.New(s)
 
 	r := transport.NewHTTPServer(e, s)

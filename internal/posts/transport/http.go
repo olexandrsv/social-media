@@ -13,7 +13,6 @@ import (
 	transport "github.com/go-kit/kit/transport/http"
 	"github.com/pkg/errors"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -84,22 +83,26 @@ func NewHTTPServer(e endpoint.Endpoint, service service.Service) *server {
 	r.Methods("PUT").Path("/chats/messages/{id}").HandlerFunc(s.updateChatMessage)
 	r.Methods("DELETE").Path("/chats/messages/{id}").HandlerFunc(s.deleteChatMessage)
 
+	r.Methods("GET").Path("/posts/missed").HandlerFunc(s.getMissedPosts)
+	r.Methods("GET").Path("/chats/messages/missed").HandlerFunc(s.getMissedMessages)
+	//r.Methods("GET").Path("/chats/messages/missed").HandlerFunc(s.missedMessages)
+	//r.Methods("PUT").Path("/chats/{chat_id}/read").HandlerFunc(s.updateReadMessages)
+	r.Methods("GET").Path("/upload/messages/{signed_url}").HandlerFunc(s.getChatMessageFile)
+	r.Methods("GET").Path("/upload/posts/{file_id}").HandlerFunc(s.getPostFile)
+
 	return s
 }
 
 func (s *server) Run() {
-	handler := handlers.CORS(
-		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
-		handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedOrigins([]string{"http://localhost:8080", "http://localhost:4200"}),
-		handlers.AllowCredentials(),
-	)(s.router)
-
-	err := http.ListenAndServe(":"+config.App.PostsService.Port, handler)
+	port := config.App.PostsService.HttpPort
+	log.Info("Posts server starts on port: " + port)
+	handler := common.CORS(s.router)
+	err := http.ListenAndServe(":"+port, handler)
 	if err != nil {
 		log.Error(err)
 		panic(err)
 	}
+	log.Info("Post server stoped")
 }
 
 func (s *server) encodeError(ctx context.Context, err error, w http.ResponseWriter) {
@@ -135,6 +138,7 @@ func writeError(w http.ResponseWriter, err error) {
 		code = e.Code()
 		msg = e.Message()
 	}
+	log.Error(err)
 	w.WriteHeader(code)
 
 	_, err = w.Write([]byte(msg))
