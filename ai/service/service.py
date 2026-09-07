@@ -3,7 +3,6 @@ from wrapt import synchronized
 from domain.tone_model.model import ToneEstimationModel
 from repository.repository import Repository
 from domain.message.message import Message
-from typing import Tuple
 import tensorflow as tf
 
 class Service:
