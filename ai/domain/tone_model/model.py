@@ -65,6 +65,9 @@ class ToneEstimationModel:
         negative_count = 0
 
         for i, message in enumerate(messages):
+            has_alnum = any(char.isalnum() for char in message.text)
+            if not has_alnum:
+                continue
             set = self.create_dataset(message.text, 0)
             result = self.model.predict(set)
 
@@ -75,5 +78,7 @@ class ToneEstimationModel:
             if positive_value > negative_value:
                 positive_count = positive_count+1
 
-        return positive_count/len(messages), negative_count/len(messages)
+        sum = positive_count + negative_count
+
+        return positive_count/sum, negative_count/sum
 
