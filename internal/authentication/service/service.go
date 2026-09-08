@@ -36,8 +36,8 @@ type AuthClaim struct {
 
 func newAuthClaim(id int, login string) *AuthClaim {
 	return &AuthClaim{
-		ID:    id,
-		Login: login,
+		ID:        id,
+		Login:     login,
 		JwtClaims: &JwtClaims{},
 	}
 }
@@ -49,8 +49,8 @@ type FileClaim struct {
 
 func newFileClaim(fileId string) *FileClaim {
 	return &FileClaim{
-		FileID: fileId,
-		JwtClaims:  &JwtClaims{},
+		FileID:    fileId,
+		JwtClaims: &JwtClaims{},
 	}
 }
 
@@ -113,6 +113,7 @@ func validate[T jwt.Claims](signedToken string, claims T) (T, error) {
 		func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtKey), nil
 		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)
 	if err != nil {
 		log.Error(errors.WithStack(err))
