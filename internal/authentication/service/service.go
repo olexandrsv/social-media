@@ -7,42 +7,51 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims interface {
-	Valid() error
-	ExpiresAt() int64
-	SetExpirationTime(int64)
+	jwt.Claims
+	init(string, time.Time)
 }
 
-type StandardClaim struct {
-	jwt.StandardClaims
+type JwtClaims struct {
+	jwt.RegisteredClaims
 }
 
-func (claim *StandardClaim) ExpiresAt() int64 {
-	return claim.StandardClaims.ExpiresAt
-}
-
-func (claim *StandardClaim) SetExpirationTime(time int64) {
-	claim.StandardClaims.ExpiresAt = time
+func (claim *JwtClaims) init(issuer string, expiresAt time.Time) {
+	claim.RegisteredClaims = jwt.RegisteredClaims{
+		Issuer:    issuer,
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
+	}
 }
 
 var jwtKey = []byte("supersercretkey")
 
-type JWTClaim struct {
+type AuthClaim struct {
 	ID    int    `json:"id"`
 	Login string `json:"login"`
-	*StandardClaim
+	*JwtClaims
+}
+
+func newAuthClaim(id int, login string) *AuthClaim {
+	return &AuthClaim{
+		ID:    id,
+		Login: login,
+		JwtClaims: &JwtClaims{},
+	}
 }
 
 type FileClaim struct {
 	FileID string `json:"file_id"`
-	*StandardClaim
+	*JwtClaims
 }
 
-func (claim *FileClaim) ExpiresAt() int64 {
-	return claim.StandardClaims.ExpiresAt
+func newFileClaim(fileId string) *FileClaim {
+	return &FileClaim{
+		FileID: fileId,
+		JwtClaims:  &JwtClaims{},
+	}
 }
 
 type Service interface {
@@ -60,15 +69,11 @@ func New() Service {
 }
 
 func (s *authService) GenerateToken(id int, login string) (string, error) {
-	return generateToken(1*time.Hour, &JWTClaim{
-		ID:            id,
-		Login:         login,
-		StandardClaim: &StandardClaim{},
-	})
+	return generateToken(1*time.Hour, newAuthClaim(id, login))
 }
 
 func (s *authService) ValidateToken(signedToken string) (int, string, error) {
-	claims, err := validate(signedToken, &JWTClaim{})
+	claims, err := validate(signedToken, &AuthClaim{})
 	if err != nil {
 		return 0, "", err
 	}
@@ -76,10 +81,7 @@ func (s *authService) ValidateToken(signedToken string) (int, string, error) {
 }
 
 func (s *authService) GenerateSignedUrl(fileID string) (string, error) {
-	return generateToken(5*time.Minute, &FileClaim{
-		FileID:        fileID,
-		StandardClaim: &StandardClaim{},
-	})
+	return generateToken(5*time.Minute, newFileClaim(fileID))
 }
 
 func (s *authService) ValidateSignedUrl(signedToken string) (string, error) {
@@ -91,8 +93,8 @@ func (s *authService) ValidateSignedUrl(signedToken string) (string, error) {
 }
 
 func generateToken(duration time.Duration, claim Claims) (string, error) {
-	expirationTime := time.Now().Add(duration)
-	claim.SetExpirationTime(expirationTime.Unix())
+	expiresAt := time.Now().Add(duration)
+	claim.init("social-media", expiresAt)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
 	tokenString, err := token.SignedString(jwtKey)
@@ -103,7 +105,7 @@ func generateToken(duration time.Duration, claim Claims) (string, error) {
 	return tokenString, nil
 }
 
-func validate[T Claims](signedToken string, claims T) (T, error) {
+func validate[T jwt.Claims](signedToken string, claims T) (T, error) {
 	var t T
 	token, err := jwt.ParseWithClaims(
 		signedToken,
@@ -121,8 +123,13 @@ func validate[T Claims](signedToken string, claims T) (T, error) {
 		log.Error(errors.New("couldn't parse claims"))
 		return t, common.ErrInvalidToken
 	}
+	date, err := claims.GetExpirationTime()
+	if err != nil {
+		log.Error(errors.WithStack(err))
+		return t, common.ErrInternal
+	}
 
-	if claims.ExpiresAt() < time.Now().Local().Unix() {
+	if !date.After(time.Now()) {
 		log.Error(errors.New("token expired"))
 		return t, common.ErrInvalidToken
 	}
