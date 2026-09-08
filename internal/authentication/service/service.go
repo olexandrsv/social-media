@@ -26,8 +26,6 @@ func (claim *JwtClaims) init(issuer string, expiresAt time.Time) {
 	}
 }
 
-var jwtKey = []byte("supersercretkey")
-
 type AuthClaim struct {
 	ID    int    `json:"id"`
 	Login string `json:"login"`
@@ -62,18 +60,25 @@ type Service interface {
 }
 
 type authService struct {
+	key []byte
 }
 
-func New() Service {
-	return &authService{}
+func New() (Service, error) {
+	key, err := common.ReadSecret("key")
+	if err != nil {
+		return nil, err
+	}
+	return &authService{
+		key: []byte(key),
+	}, nil
 }
 
 func (s *authService) GenerateToken(id int, login string) (string, error) {
-	return generateToken(1*time.Hour, newAuthClaim(id, login))
+	return s.generateToken(1*time.Hour, newAuthClaim(id, login))
 }
 
 func (s *authService) ValidateToken(signedToken string) (int, string, error) {
-	claims, err := validate(signedToken, &AuthClaim{})
+	claims, err := validate(signedToken, &AuthClaim{}, s.key)
 	if err != nil {
 		return 0, "", err
 	}
@@ -81,23 +86,23 @@ func (s *authService) ValidateToken(signedToken string) (int, string, error) {
 }
 
 func (s *authService) GenerateSignedUrl(fileID string) (string, error) {
-	return generateToken(5*time.Minute, newFileClaim(fileID))
+	return s.generateToken(5*time.Minute, newFileClaim(fileID))
 }
 
 func (s *authService) ValidateSignedUrl(signedToken string) (string, error) {
-	claims, err := validate(signedToken, &FileClaim{})
+	claims, err := validate(signedToken, &FileClaim{}, s.key)
 	if err != nil {
 		return "", err
 	}
 	return claims.FileID, nil
 }
 
-func generateToken(duration time.Duration, claim Claims) (string, error) {
+func (s *authService) generateToken(duration time.Duration, claim Claims) (string, error) {
 	expiresAt := time.Now().Add(duration)
 	claim.init("social-media", expiresAt)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(s.key)
 	if err != nil {
 		log.Error(errors.WithStack(err))
 		return "", common.ErrInternal
@@ -105,13 +110,13 @@ func generateToken(duration time.Duration, claim Claims) (string, error) {
 	return tokenString, nil
 }
 
-func validate[T jwt.Claims](signedToken string, claims T) (T, error) {
+func validate[T jwt.Claims](signedToken string, claims T, key []byte) (T, error) {
 	var t T
 	token, err := jwt.ParseWithClaims(
 		signedToken,
 		claims,
 		func(token *jwt.Token) (interface{}, error) {
-			return []byte(jwtKey), nil
+			return []byte(key), nil
 		},
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)

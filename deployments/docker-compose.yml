@@ -71,6 +71,8 @@ services:
         PORT: "8085"
     ports:
       - "8085:8085"
+    secrets:
+      - key
     depends_on:
       - log
   
@@ -152,3 +154,7 @@ volumes:
   mongo1_data:
   mongo1_config:
   files_volume:
+
+secrets:
+  key:
+    file: ./secrets/key.txt

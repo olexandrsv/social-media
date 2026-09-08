@@ -9,7 +9,10 @@ import (
 func main() {
 	app.InitAuthService()
 
-	s := service.New()
+	s, err := service.New()
+	if err != nil {
+		return
+	}
 	server := server.NewGRPCServer(s)
 	server.Run()
 }
