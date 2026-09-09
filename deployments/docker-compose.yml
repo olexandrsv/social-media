@@ -6,6 +6,10 @@ services:
       context: ./databases/postgres_db
       args:
         SERVICE: "projects"
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/projects-database-secret
+    secrets:
+      - projects-database-secret
     volumes:
       - projects_volume:/var/lib/postgresql/data
 
@@ -15,6 +19,10 @@ services:
       context: ./databases/postgres_db/
       args:
         SERVICE: "users"
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/users-database-secret
+    secrets:
+      - users-database-secret
     volumes:
       - users_volume:/var/lib/postgresql/data
   
@@ -24,6 +32,10 @@ services:
       context: ./databases/postgres_db/
       args:
         SERVICE: "chats"
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/chats-database-secret
+    secrets:
+      - chats-database-secret
     volumes:
       - chats_volume:/var/lib/postgresql/data
   
@@ -73,6 +85,7 @@ services:
       - "8085:8085"
     secrets:
       - key
+      - mongodb
     depends_on:
       - log
   
@@ -85,6 +98,8 @@ services:
         PORT: "8086"
     ports:
       - "8086:8086"
+    secrets:
+      - projects-database-secret
     depends_on:
       - log
       - auth
@@ -99,6 +114,8 @@ services:
         PORT: "8083"
     ports:
       - "8083:8083"
+    secrets:
+      - chats-database-secret
     depends_on:
       - log
       - auth
@@ -142,6 +159,8 @@ services:
     ports:
       - "8081:8081"
       - "8087:8087"
+    secrets:
+      - users-database-secret
     depends_on:
       - log
       - auth
@@ -158,3 +177,11 @@ volumes:
 secrets:
   key:
     file: ./secrets/key.txt
+  mongodb:
+    file: ./secrets/mongodb.txt
+  users-database-secret:
+    file: ./secrets/users-database.txt
+  chats-database-secret:
+    file: ./secrets/chats-database.txt
+  projects-database-secret:
+    file: ./secrets/projects-database.txt

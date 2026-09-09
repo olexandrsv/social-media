@@ -33,9 +33,12 @@ type repo struct {
 	db *sql.DB
 }
 
-func New() Repository {
+func New() (Repository, error) {
+	password, err := common.ReadSecret("chats-database-secret")
+	if err != nil {
+		return nil, err
+	}
 	user := config.App.Chats.DB.User
-	password := config.App.Chats.DB.Password
 	host := config.App.Chats.DB.Host
 	port := config.App.Chats.DB.Port
 	name := config.App.Chats.DB.Name
@@ -47,7 +50,7 @@ func New() Repository {
 	}
 	return &repo{
 		db: db,
-	}
+	}, nil
 }
 
 func (r *repo) UserChats(userID int) ([]*chat.Chat, error) {

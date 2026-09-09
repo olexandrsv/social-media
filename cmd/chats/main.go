@@ -11,7 +11,10 @@ import (
 func main() {
 	app.InitChatsService()
 	
-	repo := repository.New()
+	repo, err := repository.New()
+	if err != nil {
+		return
+	}
 
 	authClient := clients.NewAuthClient()
 	usersClient := clients.NewUsersClient()

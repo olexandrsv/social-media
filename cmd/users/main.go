@@ -14,7 +14,10 @@ func main() {
 	app.InitUsersService()
 
 	var wg sync.WaitGroup
-	repo := repository.New()
+	repo, err := repository.New()
+	if err != nil {
+		return
+	}
 	auth := clients.NewAuthClient()
 
 	s := service.New(repo, auth)

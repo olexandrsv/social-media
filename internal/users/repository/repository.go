@@ -37,9 +37,12 @@ type repo struct {
 	db *sql.DB
 }
 
-func New() Repository {
+func New() (Repository, error) {
+	password, err := common.ReadSecret("users-database-secret")
+	if err != nil {
+		return nil, err
+	}
 	user := config.App.Users.DB.User
-	password := config.App.Users.DB.Password
 	host := config.App.Users.DB.Host
 	port := config.App.Users.DB.Port
 	name := config.App.Users.DB.Name
@@ -47,12 +50,12 @@ func New() Repository {
 	log.Infof("URL: %s", url)
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		log.Error(err)
-		panic("Unable to connect to database")
+		log.Error(errors.WithStack(err))
+		return nil, err
 	}
 	return &repo{
 		db: db,
-	}
+	}, nil
 }
 
 func (r *repo) CreateUser(userModel UserModel) (*user.User, error) {

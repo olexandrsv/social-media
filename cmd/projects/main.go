@@ -14,7 +14,10 @@ func main() {
 	auth := clients.NewAuthClient()
 	users := clients.NewUsersClient()
 
-	repo := repository.New()
+	repo, err := repository.New()
+	if err != nil {
+		return
+	}
 	s := service.New(repo, auth, users)
 	srv := server.New(s)
 	srv.Run()

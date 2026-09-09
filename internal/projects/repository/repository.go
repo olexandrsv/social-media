@@ -24,9 +24,12 @@ type repo struct {
 	db *sql.DB
 }
 
-func New() Repository {
+func New() (Repository, error) {
+	password, err := common.ReadSecret("projects-database-secret")
+	if err != nil {
+		return nil, err
+	}
 	user := config.App.Projects.DB.User
-	password := config.App.Projects.DB.Password
 	host := config.App.Projects.DB.Host
 	port := config.App.Projects.DB.Port
 	name := config.App.Projects.DB.Name
@@ -38,7 +41,7 @@ func New() Repository {
 	}
 	return &repo{
 		db: db,
-	}
+	}, nil
 }
 
 func (r *repo) CreateProject(name, description, stack string, userID int) (int, error) {

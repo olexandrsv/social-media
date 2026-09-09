@@ -58,7 +58,6 @@ type logService struct {
 
 type database struct {
 	User     string
-	Password string
 	Host     string
 	Port     string
 	Name     string
@@ -122,7 +121,6 @@ func (cfg *Config) parseDatabase(sectionName string) database {
 	section := cfg.Section(sectionName)
 	return database{
 		User:     section.Key("user").String(),
-		Password: section.Key("password").String(),
 		Host:     section.Key("host").String(),
 		Port:     section.Key("port").String(),
 		Name:     section.Key("name").String(),
@@ -156,7 +154,6 @@ func (cfg *Config) InitFiles() {
 func (cfg *Config) InitPostgres() {
 	postgresSection := cfg.Section("postgres")
 	App.PostgresDB.User = postgresSection.Key("postgres_user").String()
-	App.PostgresDB.Password = postgresSection.Key("postgres_password").String()
 	App.PostgresDB.Host = postgresSection.Key("postgres_host").String()
 	App.PostgresDB.Port = postgresSection.Key("postgres_port").String()
 	App.PostgresDB.Name = postgresSection.Key("postgres_db_name").String()
@@ -165,7 +162,6 @@ func (cfg *Config) InitPostgres() {
 func (cfg *Config) InitMongo() {
 	mongoSection := cfg.Section("mongo")
 	App.MongoDB.User = mongoSection.Key("mongo_user").String()
-	App.MongoDB.Password = mongoSection.Key("mongo_password").String()
 	App.MongoDB.Host = mongoSection.Key("mongo_host").String()
 	App.MongoDB.Port = mongoSection.Key("mongo_port").String()
 	App.MongoDB.Name = mongoSection.Key("mongo_db_name").String()
