@@ -6,6 +6,7 @@ def main():
     repo = Repository()
     service = Service(repo)
     server = Server(service)
-    server.run()
+
+    return server.app
 
 main()

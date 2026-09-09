@@ -143,7 +143,7 @@ services:
   
   ai:
     build:
-      dockerfile: ./deployments/services/Dockerfile.python
+      dockerfile: ./deployments/services/Dockerfile.gunicorn
       context: ..
     ports:
       - "8000:8000"
