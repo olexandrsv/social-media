@@ -41,16 +41,20 @@ services:
   
   mongo1:
     build: ./databases/mongo_db
-    command: ["--replSet", "rs1", "--bind_ip_all", "--port", "27017"]
     ports:
       - "27017:27017"
     healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs1',members:[{_id:0,host:'mongo1:27017'}]}) }" | mongosh --port 27017
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs1',members:[{_id:0,host:'mongo1:27017'}]}) }" | mongosh --port 27017 -u mongo -p "$$(cat /run/secrets/mongodb-secret)"
       interval: 5s
       timeout: 30s
       start_period: 0s
       start_interval: 1s
       retries: 30
+    environment:
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongodb-secret
+    secrets:
+      - mongodb-secret
+      - mongodb-internal-secret
     volumes:
       - "mongo1_data:/data/db"
       - "mongo1_config:/data/configdb"
@@ -85,7 +89,6 @@ services:
       - "8085:8085"
     secrets:
       - key
-      - mongodb
     depends_on:
       - log
   
@@ -132,6 +135,8 @@ services:
     ports:
       - "8082:8082"
       - "8088:8088"
+    secrets:
+      - mongodb-secret
     depends_on:
       - mongo1
       - log
@@ -177,8 +182,10 @@ volumes:
 secrets:
   key:
     file: ./secrets/key.txt
-  mongodb:
+  mongodb-secret:
     file: ./secrets/mongodb.txt
+  mongodb-internal-secret:
+    file: ./secrets/mongodb-internal-secret.txt
   users-database-secret:
     file: ./secrets/users-database.txt
   chats-database-secret:

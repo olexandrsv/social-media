@@ -13,7 +13,10 @@ import (
 func main() {
 	app.InitPostsService()
 
-	repo := repository.New()
+	repo, err := repository.New()
+	if err != nil {
+		return
+	}
 	auth := clients.NewAuthClient()
 	users := clients.NewUsersClient()
 	chats := clients.NewChatsClient()

@@ -36,15 +36,18 @@ type repo struct {
 	readMessages *mongo.Collection
 }
 
-func New() Repository {
-	//user := config.App.MongoDB.User
-	//password := config.App.MongoDB.Password
+func New() (Repository, error) {
+	password, err := common.ReadSecret("mongodb-secret")
+	if err != nil {
+		return nil, err
+	}
+	user := config.App.MongoDB.User
 	host := config.App.MongoDB.Host
 	port := config.App.MongoDB.Port
 	databaseName := config.App.MongoDB.Name
 
 	// mongodb://mongo_adiutor:27017/?replicaSet=rs1&directConnection=true
-	url := fmt.Sprintf("mongodb://%s:%s/%s/?replicaSet=rs1", host, port, databaseName)
+	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s?replicaSet=rs1&authSource=admin", user, password, host, port, databaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
 		log.Error(errors.WithStack(err))
@@ -68,7 +71,7 @@ func New() Repository {
 		comments:     db.Collection("comments"),
 		messages:     db.Collection("messages"),
 		readMessages: db.Collection("read_messages"),
-	}
+	}, nil
 }
 
 func (r *repo) CreatePost(req CreatePostReq) (*post.Post, error) {
