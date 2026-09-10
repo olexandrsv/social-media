@@ -1,0 +1,27 @@
+.post-component{
+	position: relative;
+	top: 5%;
+	left: 10%;
+}
+
+.post-component mat-form-field{
+	width: 90%;
+}
+
+.send-btn{
+	position: absolute;
+	right: 30%;
+}
+
+.new-post{
+	padding: 40px;
+	height: fit-content;
+}
+
+.buttons input{
+	visibility: hidden;
+}
+
+.text{
+	width: 90%;
+}

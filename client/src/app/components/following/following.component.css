@@ -1,0 +1,24 @@
+.following-component{
+	position: relative;
+	top: 20px;
+}
+
+.container{
+	margin: 20px;
+}
+
+.post2{
+	padding: 20px;
+	border: 1px solid black;
+	width: 70%;
+	border-radius: 10px;
+}
+
+.option{
+	display: flex;
+}
+
+.code{
+	display: flex;
+	gap: 3px;
+}

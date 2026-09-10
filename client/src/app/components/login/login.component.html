@@ -1,0 +1,19 @@
+<div class="form">
+  <h2>Login</h2>
+  <br>
+  <mat-form-field appearance="outline">
+    <mat-label>Login</mat-label>
+    <input [(ngModel)]="login" matInput>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Password</mat-label>
+    <input id="pssw" name="pssw" [(ngModel)]="password" matInput [type]="hide ? 'password' : 'text'">
+    <button mat-icon-button matSuffix (click)="hide = !hide" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hide">
+      <mat-icon>{{hide ? 'visibility_off' : 'visibility'}}</mat-icon>
+    </button>
+  </mat-form-field>
+  <br>
+  <a>Don't have account?  </a><a routerLink="/register" routerLinkActive="active">Register</a>
+  <button mat-flat-button class="reg-btn" color="primary" type="submit" (click)="onSubmit()">Login</button>
+  <br>
+</div>

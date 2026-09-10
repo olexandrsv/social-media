@@ -1,0 +1,34 @@
+.profile-component{
+	position: relative;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -70%);
+}
+
+.names mat-form-field{
+	padding: 10px;
+}
+
+.bio{
+	width: 90%;
+	margin: 10px;
+}
+
+.interests{
+	width: 90%;
+	margin: 10px;
+}
+
+.interests textarea{
+	height: 100px;
+}
+
+.pencil{
+	position: absolute;
+	right: 25px;
+}
+
+.updateBtn{
+	position: absolute;
+	right: 40px;
+}

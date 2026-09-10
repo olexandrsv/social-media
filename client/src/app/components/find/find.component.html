@@ -1,0 +1,31 @@
+<div class="find-component">
+  <mat-form-field class="text" appearance="fill">
+    <mat-icon color="primary">search</mat-icon>
+    <input type="text"
+      placeholder="Search"
+      aria-label="Number"
+      matInput
+      [matAutocomplete]="auto"
+      (keyup)="onButtonPressed($event)"
+      [(ngModel)]="text">
+    <mat-autocomplete #auto="matAutocomplete">
+      @for (option of options; track option) {
+        <mat-option (click)="onOptionClicked(option.login)" [value]="option.login">
+          <mat-icon color="primary">account_circle</mat-icon>
+          {{option.login}}
+        </mat-option>
+      }
+    </mat-autocomplete>
+  </mat-form-field>
+  <div class="user-container">
+    <h1>{{login}}</h1>
+    <div class="name">
+      <h2>{{firstName}}</h2>
+      <h2>{{secondName}}</h2>
+    </div>
+    <h3>{{bio}}</h3>
+    <h3>{{interests}}</h3>
+  </div>
+  <br>
+    <button mat-flat-button (click)="follow()" color="primary">Follow</button>
+  </div>

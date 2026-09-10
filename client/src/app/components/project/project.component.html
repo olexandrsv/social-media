@@ -1,0 +1,21 @@
+<div class="new-project">
+    <h2>{{projectData.title}}</h2>
+    <mat-form-field appearance="fill" class="text">
+      <mat-label>Name</mat-label>
+      <textarea [(ngModel)]="project.name" matInput></textarea>
+    </mat-form-field>
+    <br>
+    <mat-form-field appearance="fill" class="text">
+        <mat-label>Description</mat-label>
+        <textarea [(ngModel)]="project.description" matInput></textarea>
+    </mat-form-field>
+    <br>
+    <mat-form-field appearance="fill" class="text">
+        <mat-label>Stack</mat-label>
+        <textarea [(ngModel)]="project.stack" matInput></textarea>
+    </mat-form-field>
+    <br>
+    <button mat-flat-button class="add-btn" (click)="onClick()" color="primary">
+        {{projectData.buttonTitle}}
+    </button>
+</div>

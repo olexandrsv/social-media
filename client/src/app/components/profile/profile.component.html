@@ -1,0 +1,28 @@
+<div class="profile-component">
+  <button (click)="changeMode()" class="pencil" mat-icon-button color="primary">
+    <mat-icon>mode_edit</mat-icon>
+  </button>
+  <h2>{{login}}</h2>
+  <div class="names">
+    <mat-form-field appearance="fill">
+      <mat-label>First name</mat-label>
+      <input matInput value="Bob" [(ngModel)]="name" [disabled]="isDisabled">
+    </mat-form-field>
+    <mat-form-field appearance="fill">
+      <mat-label>Second name</mat-label>
+      <input matInput value="Arnum" [(ngModel)]="surname" [disabled]="isDisabled">
+    </mat-form-field>
+  </div>
+  <mat-form-field class="bio" appearance="outline">
+    <mat-label>Biography</mat-label>
+    <textarea matInput value="very interesting text" [(ngModel)]="bio" [disabled]="isDisabled"></textarea>
+  </mat-form-field>
+  <mat-form-field class="interests" appearance="outline">
+    <mat-label>Interests</mat-label>
+    <textarea matInput value="very interesting text" [(ngModel)]="interests" [disabled]="isDisabled"></textarea>
+  </mat-form-field>
+  <br>
+    @if (!isDisabled) {
+      <button mat-flat-button class="updateBtn" (click)="updateInfo()" color="primary">Update</button>
+    }
+  </div>

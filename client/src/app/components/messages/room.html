@@ -1,0 +1,13 @@
+<div class="container">
+  <mat-form-field appearance="outline">
+    <mat-label>Name</mat-label>
+    <input [(ngModel)]="name" matInput>
+  </mat-form-field>
+  <br>
+  <mat-form-field appearance="outline">
+    <mat-label>Users</mat-label>
+    <input [(ngModel)]="users" matInput>
+  </mat-form-field>
+  <br>
+  <button (click)="createRoom()" mat-raised-button color="primary">Create</button>
+</div>

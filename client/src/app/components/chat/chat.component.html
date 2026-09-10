@@ -1,0 +1,47 @@
+<div class="container">
+  <b>{{chatData.title}}</b>
+  <br>
+    <br>
+      <mat-form-field appearance="outline">
+        <mat-label>Name</mat-label>
+        <input [(ngModel)]="chat.name" matInput>
+      </mat-form-field>
+      <br>
+        <div class="logins-input">
+          <mat-form-field class="text" appearance="fill">
+            <mat-icon color="primary">search</mat-icon>
+            <input type="text"
+              placeholder="Search"
+              aria-label="Number"
+              matInput
+              [matAutocomplete]="auto"
+              (keyup)="onButtonPressed($event)"
+              [(ngModel)]="text">
+            <mat-autocomplete #auto="matAutocomplete">
+              @for (option of options; track option) {
+                <mat-option (click)="onOptionClicked(option.login)" [value]="option.login">
+                  <mat-icon color="primary">account_circle</mat-icon>
+                  {{option.login}}
+                </mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+          <button (click)="onOptionChoosed()" mat-icon-button color="primary">
+            <mat-icon>add_box</mat-icon>
+          </button>
+        </div>
+        <div class="logins">
+          @for (user of chat['users']; track user; let i = $index) {
+            <div>
+              <div>
+                <a>{{user['login']}}</a>
+                <button (click)="deleteUser(i)" mat-icon-button color="warn">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+        <br>
+          <button (click)="onClick()" mat-raised-button color="primary">{{chatData.buttonTitle}}</button>
+        </div>

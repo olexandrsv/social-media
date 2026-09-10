@@ -1,0 +1,45 @@
+.new-post{
+	padding: 20px;
+}
+
+.controls{
+	display: flex;
+}
+
+.new-post input{
+	visibility: hidden;
+}
+
+.controls mat-form-field{
+	width: 70%;
+	heigth: 10px;
+}
+
+.controls textarea{
+	height: 20px;
+}
+
+.post2{
+	padding: 20px;
+	border: 1px solid black;
+	width: 70%;
+	border-radius: 10px;
+}
+
+.control-buttons{
+	position: relative;
+	padding-left: 80%;
+	top: -45px;
+	width: fit-content;
+	display: flex;
+}
+
+.code{
+	display: flex;
+	gap: 3px;
+}
+
+.horizontal{
+	display: flex;
+	gap: 10px;
+}

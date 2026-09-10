@@ -1,0 +1,66 @@
+<div class="messages-component">
+  <div class="users">
+    <button (click)="openDialog()" mat-button color="primary">Add</button>
+    <button (click)="updateChat()" mat-button color="primary">Update</button>
+    <button (click)="deleteChat()" mat-button color="primary">Delete</button>
+    @for (chat of chats; track chat; let i = $index) {
+      <div class="users-container">
+        <button (click)="changeChat(chat)" mat-button class="menu-button" color="primary">
+          <mat-icon matBadge="{{missed.get(chat.id)}}" [matBadgeHidden]="!(missed.has(chat.id) && missed.get(chat.id)! > 0)" matBadgeOverlap="false" matBadgeSize="large" matBadgePosition="before">
+            description
+          </mat-icon>
+          {{chat['name']}}
+        </button>
+      </div>
+    }
+  </div>
+  <div class="container">
+    @if (choosedChat) {
+      <button mat-fab extended color="primary" (click)="createMessage()">
+        <mat-icon>add</mat-icon>
+        Write Message
+      </button>
+    }
+    <div class="messages">
+      @for (message of this.postsStore.messagesStore.currentItems; track message; let i = $index) {
+        <div class="message">
+          <div class="control-buttons">
+            <button (click)="updateMessage(message)" mat-icon-button color="primary">
+              <mat-icon>create</mat-icon>
+            </button>
+            <button (click)="deleteMessage(message)" mat-icon-button color="warn">
+              <mat-icon>clear</mat-icon>
+            </button>
+          </div>
+          <b>{{message.getName()}}</b>
+          <br>
+            <br>
+              <div class="text">
+                @for (list of message.parsedText; track list) {
+                  <div class="code">
+                    @for (el of list; track el) {
+                      <div>
+                        <h3 style="color:{{el.color}}">{{el.text}}</h3>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+              @for (link of message['images']; track link) {
+                <img width="90%" height="90%" src="{{link.getURL()}}">
+              }
+              <nav>
+                @for (link of message['files']; track link) {
+                  <ul>
+                    <li><a href="{{link.getURL()}}">{{link.getURL()}}</a></li>
+                  </ul>
+                }
+              </nav>
+              <br>
+              </div>
+            }
+            <br>
+              <br>
+              </div>
+            </div>
+          </div>

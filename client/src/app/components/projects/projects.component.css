@@ -1,0 +1,56 @@
+.projects-component{
+	position: relative;
+	top: 5%;
+	left: 10%;
+}
+
+.project{
+	width: 80%;
+	padding: 15px;
+	border: 3px solid;
+	border-color: purple;
+	border-radius: 10px;
+	margin-bottom: 3px;
+}
+
+.project-header{
+	display: flex;
+}
+
+.control-buttons{
+	position: relative;
+	left: 85%;
+}
+
+.project-body{
+	display: flex;
+	font-size: 20px;
+	width: 100%;
+}
+
+.project-table{
+	border-spacing: 20px;
+}
+
+.project-name{
+	width: 20%;
+	height: 100%;
+	border: 2px solid;
+	border-color: purple;
+	border-right: none;
+}
+
+.project-description{
+	width: 50%;
+	height: 100%;
+	border: 2px solid;
+	border-color: purple;
+	border-right: none;
+}
+
+.project-stack{
+	width: 30%;
+	height: 100%;
+	border: 2px solid;
+	border-color: purple;
+}

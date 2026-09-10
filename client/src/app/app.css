@@ -1,0 +1,40 @@
+.main{
+	height: 100%;
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.menu{
+	width: 25%;
+	box-sizing: border-box;
+	height: 100%;
+}
+
+.center{
+	width: 50%;
+	height: 100%;
+	box-sizing: border-box;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.right{
+	width: 25%;
+	height: 100%;
+    box-sizing: border-box;
+}
+
+.button-container{
+	position: relative;
+	top: 50%;
+	left: 50%;
+	transform: translate(-25%, -50%);
+}
+
+.menu-button{
+	margin: 8px;
+}
+
+.following{
+	display: flex;
+}

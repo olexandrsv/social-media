@@ -1,0 +1,13 @@
+.container{
+	margin: 30px;
+}
+
+.logins-input{
+	height: 110px;
+	display: flex;
+}
+
+.logins{
+	overflow-y: scroll;
+	max-height: 100px;
+}

@@ -1,0 +1,60 @@
+<div class="following-component">
+  <mat-form-field class="text" appearance="fill">
+    <mat-icon color="primary">search</mat-icon>
+    <input type="text"
+      placeholder="Search"
+      aria-label="Number"
+      matInput
+      [formControl]="input"
+      [matAutocomplete]="auto"
+      (keyup)="onButtonPressed($event)"
+      [(ngModel)]="text">
+    <mat-autocomplete #auto="matAutocomplete">
+      @for (option of filteredFollowing; track option) {
+        <mat-option (click)="onUserChoosed(option)" [value]="option.login">
+          <mat-icon matBadge="{{missed.get(option.id)}}" [matBadgeHidden]="!((missed.has(option.id) && missed.get(option.id)! > 0))" matBadgeOverlap="false" matBadgeSize="large" matBadgePosition="before" color="primary">
+            account_circle
+          </mat-icon>
+          {{option.login}}
+        </mat-option>
+      }
+    </mat-autocomplete>
+  </mat-form-field>
+  <br>
+    <div class="container">
+      @for (post of this.postsStore.postsStore.currentItems; track post; let i = $index) {
+        <div>
+          <div class="post2">
+            <div class="text">
+              @for (list of post.parsedText; track list) {
+                <div class="code">
+                  @for (el of list; track el) {
+                    <div>
+                      <h3 style="color:{{el.color}}">{{el.text}}</h3>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            @for (link of post['images']; track link) {
+              <img width="90%" height="90%" src="{{link.getURL()}}">
+            }
+            <nav>
+              @for (link of post['files']; track link) {
+                <ul>
+                  <li><a href="{{link.getURL()}}">{{link.getURL()}}</a></li>
+                </ul>
+              }
+            </nav>
+            <br>
+              <button (click)="openDialog(post)" mat-icon-button color="primary">
+                <mat-icon>comment</mat-icon>
+              </button>
+            </div>
+            <br>
+              <br>
+              </div>
+            }
+          </div>
+          <br>
+          </div>

@@ -1,0 +1,41 @@
+<div class="main">
+  <div class="menu">
+    <div class="button-container">
+      <button mat-button (click)="navigateTo('/projects')" class="menu-button" color="primary">
+        <mat-icon>code</mat-icon>
+        Projects
+      </button>
+      <br>
+      <button mat-button (click)="navigateTo('/messages')" class="menu-button" color="primary">
+        <mat-icon matBadge="{{missedMessages.totalMissedItems}}" [matBadgeHidden]="missedMessages.totalMissedItems <= 0" matBadgeOverlap="false" matBadgeSize="large" matBadgePosition="before">
+          forum
+        </mat-icon>
+        Messages
+      </button>
+      <br>
+      <button mat-button (click)="navigateTo('/following')" class="menu-button" color="primary">
+        <mat-icon matBadge="{{missedPosts.totalMissedItems}}" [matBadgeHidden]="missedPosts.totalMissedItems <= 0" matBadgeOverlap="false" matBadgeSize="large" matBadgePosition="before">
+          supervised_user_circle
+        </mat-icon>
+        Following
+      </button>
+      <br>
+      <button mat-button (click)="navigateTo('/posts')" class="menu-button" color="primary">
+      <mat-icon>description</mat-icon>
+        Posts
+      </button>
+      <br>
+      <button mat-button (click)="navigateTo('/find')" class="menu-button" color="primary">
+        <mat-icon>public</mat-icon>
+        Find
+      </button>
+      <br>
+      <button mat-button (click)="navigateTo('/profile')" class="menu-button" color="primary">
+        <mat-icon>person</mat-icon>
+        Profile
+      </button>
+    </div>
+  </div>
+  <div class="center"><router-outlet></router-outlet></div>
+  <div class="right"></div>
+</div>

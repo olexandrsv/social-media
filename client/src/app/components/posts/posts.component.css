@@ -1,0 +1,50 @@
+.post-component{
+	position: relative;
+	top: 5%;
+	left: 10%;
+}
+
+.post-component mat-form-field{
+	width: 90%;
+}
+
+.send-btn{
+	position: absolute;
+	right: 30%;
+}
+
+.new-post{
+	border: 1px solid black;
+	padding: 40px;
+	width: 70%;
+}
+
+.buttons input{
+	visibility: hidden;
+}
+
+.container{
+	margin-top: 30px;
+}
+
+.post2{
+	position: relative;
+	padding: 20px;
+	border: 1px solid black;
+	width: 70%;
+	border-radius: 10px;
+}
+
+.control-buttons{
+	position: relative;
+	padding-left: 80%;
+	top: -20px;
+	right: -20px;
+	width: fit-content;
+	display: flex;
+}
+
+.code{
+	display: flex;
+	gap: 3px;
+}

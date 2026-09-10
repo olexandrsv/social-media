@@ -1,0 +1,17 @@
+.find-component{
+	position: relative;
+	top: 5%;
+	left: 5%;
+}
+
+.text{
+	width: 80%;
+}
+
+.name{
+	display: flex;
+}
+
+.name h2{
+	padding: 10px;
+}

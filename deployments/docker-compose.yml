@@ -61,8 +61,8 @@ services:
   
   frontend:
     build: 
-      dockerfile: ./social-media/deployments/frontend/Dockerfile
-      context: ../../
+      dockerfile: ./deployments/frontend/Dockerfile
+      context: ..
     ports:
       - "8080:8080"
   

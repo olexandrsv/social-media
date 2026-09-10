@@ -1,0 +1,47 @@
+<div class="new-post">
+  <h2>{{commentData.title}}</h2>
+  <mat-form-field appearance="fill" class="text">
+    <mat-label>Text</mat-label>
+    <textarea [(ngModel)]="comment.text" matInput></textarea>
+  </mat-form-field>
+  <div class="buttons">
+    <button (click)="uploadImg.click()" mat-icon-button color="primary">
+      <mat-icon>insert_photo</mat-icon>
+    </button>
+    <button (click)="uploadFile.click()" mat-icon-button color="primary">
+      <mat-icon>insert_drive_file</mat-icon>
+    </button>
+
+    <input #uploadImg type="file" name="images" (change)="onImgSelected($event, uploadImg)" multiple/>
+    <input #uploadFile type="file" name="files" (change)="onFileSelected($event, uploadFile)" multiple/>
+    <button mat-flat-button class="send-btn" (click)="onClick()" color="primary">
+      {{commentData.buttonTitle}}
+    </button>
+  </div>
+  <br>
+    @for (image of comment['images']; track image; let i = $index) {
+      <div>
+        <div>
+          <a>{{image['name']}}</a>
+          <button (click)="removeImage(i)" mat-icon-button color="warn">
+            <mat-icon>close</mat-icon>
+          </button>
+          <br>
+            <img src="{{image.getURL()}}"/>
+          </div>
+        </div>
+      }
+      <br>
+        @for (file of comment['files']; track file; let i = $index) {
+          <div>
+            <div>
+              <a>{{file['name']}}</a>
+              <button (click)="removeFile(i)" mat-icon-button color="warn">
+                <mat-icon>close</mat-icon>
+              </button>
+              <br>
+                <a href="{{file.getURL()}}" download="{{file.getURL()}}">{{file.getURL()}}</a>
+              </div>
+            </div>
+          }
+        </div>
