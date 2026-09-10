@@ -47,7 +47,6 @@ func New() (Repository, error) {
 	port := config.App.Users.DB.Port
 	name := config.App.Users.DB.Name
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, name)
-	log.Infof("URL: %s", url)
 	db, err := sql.Open("postgres", url)
 	if err != nil {
 		log.Error(errors.WithStack(err))
