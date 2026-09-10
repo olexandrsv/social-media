@@ -46,7 +46,6 @@ func New() (Repository, error) {
 	port := config.App.MongoDB.Port
 	databaseName := config.App.MongoDB.Name
 
-	// mongodb://mongo_adiutor:27017/?replicaSet=rs1&directConnection=true
 	url := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s?replicaSet=rs1&authSource=admin", user, password, host, port, databaseName)
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
